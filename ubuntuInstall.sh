@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ubuntuInstall.sh
-# Install srcML from source on Ubuntu 24.04, using an EXISTING local repo.
-# Always installs CMake from Kitware's apt repo (satisfies presets v10).
+# Install all the packages needed to install srcML from source on Ubuntu 24.04.
+# Always installs CMake from Kitware's apt repo.
 
 set -euo pipefail
 
