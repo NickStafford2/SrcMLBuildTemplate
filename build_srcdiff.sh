@@ -40,7 +40,7 @@ echo ""
 #############################################
 # Clone srcDiff if needed
 #############################################
-echo "=== [1/6] Checking for srcDiff repository ==="
+echo "=== [1/7] Checking for srcDiff repository ==="
 require_cmd git
 
 if [ -d "$SRCDIFF/.git" ]; then
@@ -53,9 +53,20 @@ fi
 echo ""
 
 #############################################
+# Update submodules
+#############################################
+echo "=== [2/7] Updating srcDiff submodules ==="
+(
+  cd "$SRCDIFF"
+  git submodule update --init --recursive
+)
+echo "✓ Submodules updated"
+echo ""
+
+#############################################
 # Sanity Checks
 #############################################
-echo "=== [2/6] Checking prerequisites ==="
+echo "=== [3/7] Checking prerequisites ==="
 require_cmd cmake
 require_cmd ninja
 
@@ -77,9 +88,9 @@ echo "✓ Commands and required directories found"
 echo ""
 
 #############################################
-# Confirm Deletion of Build Directory
+# Build directory check (prompt only if exists)
 #############################################
-echo "=== [3/6] Build directory check ==="
+echo "=== [4/7] Build directory check ==="
 if [ -d "$BUILDDIR" ]; then
   echo "Existing build directory detected:"
   echo "  $BUILDDIR"
@@ -90,10 +101,10 @@ if [ -d "$BUILDDIR" ]; then
 
   case "$CONFIRM_LC" in
   y | ye | yes)
-    echo "✓ OK. :) removing existing build directory"
+    echo "✓ User confirmed removal of existing build directory"
     ;;
   *)
-    echo "✗ Bad Idea. :/ aborting."
+    echo "✗ Confirmation not received — aborting."
     exit 1
     ;;
   esac
@@ -105,7 +116,7 @@ echo ""
 #############################################
 # Clean & Prepare Build Directory
 #############################################
-echo "=== [4/6] Preparing build directory ==="
+echo "=== [5/7] Preparing build directory ==="
 rm -rf "$BUILDDIR"
 mkdir -p "$BUILDDIR"
 echo "✓ Build directory ready: $BUILDDIR"
@@ -114,7 +125,7 @@ echo ""
 #############################################
 # Configure with CMake
 #############################################
-echo "=== [5/6] Configuring srcDiff with CMake ==="
+echo "=== [6/7] Configuring srcDiff with CMake ==="
 cd "$BUILDDIR"
 
 cmake -G Ninja \
@@ -127,7 +138,7 @@ echo ""
 #############################################
 # Build srcDiff
 #############################################
-echo "=== [6/6] Building srcDiff (ninja) ==="
+echo "=== [7/7] Building srcDiff (ninja) ==="
 ninja
 echo "✓ Build complete"
 
