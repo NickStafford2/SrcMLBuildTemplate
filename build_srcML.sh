@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
-# build_srcDiff.sh
+# build_srcML.sh
 #
-# Clone (if needed), update submodules, and build srcDiff against a
-# locally installed srcML.
+# Clone (if needed) and build srcML into a local install directory.
 #
 # Workspace:
 #   - If you pass an argument, that is the workspace directory.
 #   - Otherwise, the workspace is the directory you run this script from.
 #
-# Expected layout:
-#   <workspace>/srcML-install           (created by build_srcML.sh)
-#   <workspace>/srcML-install/share/cmake/srcml (CMake config dir)
-#   <workspace>/srcDiff                 (git clone of srcDiff)
-#   <workspace>/srcDiff/build           (build dir, will be wiped)
+# Layout created:
+#   <workspace>/srcML         (git clone of https://github.com/srcML/srcML.git)
+#   <workspace>/srcML-build   (build dir, will be wiped)
+#   <workspace>/srcML-install (CMake install prefix, will be wiped)
 
 set -euo pipefail
 
@@ -44,149 +42,111 @@ echo ""
 # Path Setup
 #############################################
 
-SRCDIFF="$WS/srcDiff"
-SRCML_INSTALL="$WS/srcML-install"
-BUILDDIR="$SRCDIFF/build"
-SRCML_CMAKE_DIR="$SRCML_INSTALL/share/cmake/srcml"
+SRCML="$WS/srcML"
+BUILDDIR="$WS/srcML-build"
+INSTALLDIR="$WS/srcML-install"
 
-echo "srcDiff source:         $SRCDIFF"
-echo "srcML install (cmake):  $SRCML_CMAKE_DIR"
-echo "Build directory:        $BUILDDIR"
+echo "srcML source:      $SRCML"
+echo "Build directory:   $BUILDDIR"
+echo "Install location:  $INSTALLDIR"
 echo ""
 
 #############################################
 # Prerequisite checks
 #############################################
 
-echo "=== [0/7] Checking required commands ==="
+echo "=== [0/6] Checking required commands ==="
 require_cmd git
 require_cmd cmake
-require_cmd ninja
-echo "✓ git, cmake, and ninja found"
+echo "✓ git and cmake found"
 echo ""
 
 #############################################
-# Clone srcDiff if needed
+# Clone srcML if needed
 #############################################
 
-echo "=== [1/7] Checking for srcDiff repository ==="
-if [ -d "$SRCDIFF/.git" ]; then
-  echo "↻ srcDiff repo already exists — skipping clone"
+echo "=== [1/6] Checking for srcML repository ==="
+if [ -d "$SRCML/.git" ]; then
+  echo "↻ srcML repo already exists — skipping clone"
 else
-  echo "Cloning srcDiff into: $SRCDIFF"
-  git clone https://github.com/srcML/srcDiff.git "$SRCDIFF"
-  echo "✓ srcDiff repository cloned"
+  echo "Cloning srcML into: $SRCML"
+  git clone https://github.com/srcML/srcML.git "$SRCML"
+  echo "✓ srcML repository cloned"
 fi
 echo ""
 
 #############################################
-# Update submodules
+# Confirm deletion of old build/install
 #############################################
 
-echo "=== [2/7] Updating srcDiff submodules ==="
-(
-  cd "$SRCDIFF"
-  git submodule update --init --recursive
-)
-echo "✓ Submodules updated"
+echo "=== [2/6] Preparing to reset build/install directories ==="
+echo "These directories will be permanently deleted (if they exist):"
+echo "  $BUILDDIR"
+echo "  $INSTALLDIR"
 echo ""
+read -r -p "Type 'y' or 'yes' to continue: " CONFIRM
 
-#############################################
-# Sanity Checks for Directories
-#############################################
+CONFIRM_LC="$(printf '%s' "$CONFIRM" | tr '[:upper:]' '[:lower:]')"
 
-echo "=== [3/7] Checking required directories ==="
-
-if [ ! -d "$SRCDIFF" ]; then
-  echo "✗ srcDiff directory not found at: $SRCDIFF"
-  echo "  Expected layout:"
-  echo "    $WS/srcDiff"
-  echo "    $WS/srcML-install"
+case "$CONFIRM_LC" in
+y | ye | yes)
+  echo "✓ User confirmed directory removal"
+  ;;
+*)
+  echo "✗ Confirmation not received — aborting."
   exit 1
-fi
-
-if [ ! -d "$SRCML_CMAKE_DIR" ]; then
-  echo "✗ srcML CMake config directory not found at:"
-  echo "  $SRCML_CMAKE_DIR"
-  echo "  Make sure srcML has been built and installed into: $SRCML_INSTALL"
-  exit 1
-fi
-
-if [ ! -f "$SRCML_CMAKE_DIR/srcMLConfig.cmake" ]; then
-  echo "✗ srcMLConfig.cmake not found in:"
-  echo "  $SRCML_CMAKE_DIR"
-  echo "  srcDiff needs the srcML CMake configuration files."
-  exit 1
-fi
-
-echo "✓ srcDiff source and srcML CMake config found"
+  ;;
+esac
 echo ""
 
 #############################################
-# Build directory check (prompt only if exists)
+# Clean & Prepare
 #############################################
 
-echo "=== [4/7] Build directory check ==="
-if [ -d "$BUILDDIR" ]; then
-  echo "Existing build directory detected:"
-  echo "  $BUILDDIR"
-  echo ""
-  read -r -p "Delete and rebuild from scratch? Type 'y' or 'yes' to continue: " CONFIRM
-
-  CONFIRM_LC="$(printf '%s' "$CONFIRM" | tr '[:upper:]' '[:lower:]')"
-
-  case "$CONFIRM_LC" in
-  y | ye | yes)
-    echo "✓ User confirmed removal of existing build directory"
-    ;;
-  *)
-    echo "✗ Confirmation not received — aborting."
-    exit 1
-    ;;
-  esac
-else
-  echo "No existing build directory found; a fresh one will be created."
-fi
-echo ""
-
-#############################################
-# Clean & Prepare Build Directory
-#############################################
-
-echo "=== [5/7] Preparing build directory ==="
-rm -rf "$BUILDDIR"
+echo "=== [3/6] Resetting build and install directories ==="
+rm -rf "$BUILDDIR" "$INSTALLDIR"
 mkdir -p "$BUILDDIR"
-echo "✓ Build directory ready: $BUILDDIR"
+echo "✓ Directories reset"
 echo ""
 
 #############################################
 # Configure with CMake
 #############################################
 
-echo "=== [6/7] Configuring srcDiff with CMake ==="
+echo "=== [4/6] Configuring srcML with CMake ==="
 cd "$BUILDDIR"
 
-cmake -G Ninja \
-  -DsrcML_DIR="$SRCML_CMAKE_DIR" \
-  "$SRCDIFF"
+cmake \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
+  "$SRCML"
 
 echo "✓ CMake configure complete"
 echo ""
 
 #############################################
-# Build srcDiff
+# Build
 #############################################
 
-echo "=== [7/7] Building srcDiff (ninja) ==="
-ninja
+echo "=== [5/6] Building srcML ==="
+cmake --build . --parallel
 echo "✓ Build complete"
 echo ""
 
-if [ -x "$BUILDDIR/bin/srcdiff" ]; then
-  echo "srcDiff binary: $BUILDDIR/bin/srcdiff"
+#############################################
+# Install
+#############################################
+
+echo "=== [6/6] Installing srcML ==="
+cmake --install .
+echo "✓ Installation complete"
+echo ""
+
+if [ -x "$INSTALLDIR/bin/srcml" ]; then
+  echo "srcML binary: $INSTALLDIR/bin/srcml"
 else
-  echo "⚠ srcdiff binary not found at $BUILDDIR/bin/srcdiff (check build logs)."
+  echo "⚠ srcML binary not found at $INSTALLDIR/bin/srcml (check build logs)."
 fi
 
-echo "=== All srcDiff steps finished successfully ==="
+echo "=== All srcML steps finished successfully ==="
 echo ""
