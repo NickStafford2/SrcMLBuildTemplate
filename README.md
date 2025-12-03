@@ -32,7 +32,7 @@ Everything installs into your chosen workspace — *no* system-wide pollution.
 2. Make all scripts executable:
 
    ```bash
-   chmod +x prereq_install_ubuntu.sh build_srcML.sh build_srcDiff.sh
+   chmod +x prereq_install_ubuntu.sh build_srcML.sh build_srcDiff.sh test_src_tools.sh
    ```
 
 3. Install prerequisites (only needed once per system):
