@@ -52,37 +52,6 @@ Think of it as a *friendly guideline* for installing srcML and srcDiff on a norm
 
 ## What this script actually does
 
+* installs all programs needed to install srcML and srdDiff
 * Builds srcML using its official preset (ci-ubuntu)
-* Redirects the install prefix to a local directory you own
 * Builds srcDiff against that local install
-* Avoids the need for sudo or system-wide installs
-* Runs a small sanity test to ensure both tools work end-to-end
-
-## Optional (if you want global commands)
-
-Add these to your `~/.bashrc` or `~/.zshrc`:
-
-```bash
-export PATH="$HOME/Projects/srcWorkspace/srcML-install/bin:$PATH"
-export PATH="$HOME/Projects/srcWorkspace/srcDiff/build/bin:$PATH"
-```
-
-Then you can run:
-
-```bash
-srcml --version
-srcdiff --help
-```
-
-from anywhere.
-
----
-
-If you want, I can also:
-
-* bundle these steps into a single `ci_build_srcML_srcdiff.sh`
-* generate a Makefile
-* add colorized output
-* create a “one command rebuild both projects” wrapper
-
-Just say the word.
