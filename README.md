@@ -1,57 +1,88 @@
+# README.md
+
 # They’re more what you’d call Guidelines than actual Code
 
 I had trouble getting the **official** srcML and srcDiff build instructions to behave on my machines, so I wrote this script instead.
 
-Think of it as a *friendly guideline* for installing srcML and srcDiff on a normal Debian/Ubuntu Linux setup. Use at your own risk, but it worked on my machine.
+Think of it as a *friendly guideline* for installing srcML and srcDiff on a normal Debian/Ubuntu Linux setup. You can download these, run them in sequence, and change them where they don't work. Update these templates if requirements change.
+
+## What this project includes
+
+This repo bundles three small scripts:
+
+* `prereq_install_ubuntu.sh`
+  Installs all packages needed to build srcML + srcDiff from source (including Kitware’s CMake).
+* `build_srcML.sh`
+  Builds srcML using its official `ci-ubuntu` preset and installs it locally into a workspace directory.
+* `build_srcDiff.sh`
+  Builds srcDiff against the locally-installed srcML and handles the *required* submodule updates.
+
+These scripts are meant to make things **reproducible**, **simple**, and **non-destructive**.
+Everything installs into your chosen workspace — *no* system-wide pollution.
 
 ## Usage
 
-2. Make the scripts executable:
+1. Clone this repo anywhere you want:
 
    ```bash
-   chmod +x build_srcML.sh build_srcDiff.sh test_src_tools.sh
+   git clone https://github.com/whatever/srcMLBuildTemplate
+   cd srcMLBuildTemplate
    ```
 
-3. Build srcML:
+2. Make all scripts executable:
+
+   ```bash
+   chmod +x prereq_install_ubuntu.sh build_srcML.sh build_srcDiff.sh
+   ```
+
+3. Install prerequisites (only needed once per system):
+
+   ```bash
+   ./prereq_install_ubuntu.sh
+   ```
+
+4. Build srcML:
 
    ```bash
    ./build_srcML.sh
    ```
 
-   This uses the upstream `ci-ubuntu` preset, recompiles,
-   and installs srcML locally into:
+   This uses the upstream “ci-ubuntu” CMake preset and installs into:
 
    ```
-   $HOME/Projects/srcWorkspace/srcML-install
+   ./srcML-install
    ```
 
-   (So no sudo required.)
+   No sudo, nothing system-wide.
 
-4. Build srcDiff:
+5. Build srcDiff:
 
    ```bash
    ./build_srcDiff.sh
    ```
 
-   This automatically points CMake at your locally installed srcML
-   using `-DsrcML_DIR=.../srcML-install/share/cmake/srcml`.
+   This script:
 
-5. Test both tools:
+   * ensures the srcDiff repo exists
+   * pulls/update submodules (**mandatory**)
+   * configures using `-DsrcML_DIR=.../srcML-install/share/cmake/srcml`
+   * builds using Ninja
 
-   ```bash
-   ./test_src_tools.sh
-   ```
+## Notes & Expectations
 
-   If everything works, you’ll see:
+* These scripts intentionally reinstall nothing system-wide except CMake (which Ubuntu often ships outdated).
+* If you’re using CI, containers, or want a reproducible local build, this setup removes most friction.
+* If something breaks, it’s likely upstream — not here.
+  At least now you’ll get a readable error instead of a cryptic one.
 
-   ```
-   [OK] srcml converted a.cpp to XML
-   [OK] srcdiff produced diff output
-   === All tests passed ===
-   ```
+## Limitations
 
-## What this script actually does
+* Only tested on Ubuntu 24.04/22.04.
+* Requires `sudo` once (for package install + Kitware repo).
+* The scripts expect a sane workspace layout, but they don’t enforce it — they just use the directory they’re in unless you pass a path explicitly.
 
-* installs all programs needed to install srcML and srdDiff
-* Builds srcML using its official preset (ci-ubuntu)
-* Builds srcDiff against that local install
+## Final Thoughts
+
+These scripts are “guidelines” — not gospel — but if the official instructions let you down, this should get you from zero to a working srcML/srcDiff setup with far fewer headaches.
+
+If you find a bug, feel free to fix it and pretend I wrote it correctly the first time.
