@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ubuntuInstall.sh
+# prereqInstallUbuntu.sh
 # Install all the packages needed to install srcML from source on Ubuntu 24.04.
 # Always installs CMake from Kitware's apt repo.
 
