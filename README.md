@@ -1,6 +1,6 @@
 # srcML & srcDiff Build Template
 
-# They’re more what you’d call Guidelines than actual Code
+## They’re more what you’d call Guidelines than actual Code
 
 I had trouble getting the **official** srcML and srcDiff build instructions to behave on my machines, so I wrote this script instead.
 
