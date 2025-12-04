@@ -1,4 +1,4 @@
-# README.md
+# srcML & srcDiff Build Template
 
 # They’re more what you’d call Guidelines than actual Code
 
@@ -25,7 +25,7 @@ Everything installs into your chosen workspace — *no* system-wide pollution.
 1. Clone this repo anywhere you want:
 
    ```bash
-   git clone https://github.com/whatever/srcMLBuildTemplate
+   git clone git@github.com:NickStafford2/SrcMLBuildTemplate.git
    cd srcMLBuildTemplate
    ```
 
