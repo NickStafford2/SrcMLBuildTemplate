@@ -128,9 +128,14 @@ echo ""
 echo "=== [6/7] Configuring srcDiff with CMake ==="
 cd "$BUILDDIR"
 
-cmake -G Ninja \
+cmake -S "$SRCDIFF" \
+  -B "$BUILDDIR" \
+  -G Ninja \
   -DsrcML_DIR="$SRCML_CMAKE_DIR" \
-  "$SRCDIFF"
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
 
 echo "✓ CMake configure complete"
 echo ""
@@ -139,7 +144,7 @@ echo ""
 # Build srcDiff
 #############################################
 echo "=== [7/7] Building srcDiff (ninja) ==="
-ninja
+ninja -C "$BUILDDIR"
 echo "✓ Build complete"
 
 echo ""
