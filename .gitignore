@@ -2,3 +2,7 @@ srcDiff/
 srcML/
 srcML-build/
 srcML-install/
+srcDispatch/
+srcMove/
+srcReader/
+srcSAX/
