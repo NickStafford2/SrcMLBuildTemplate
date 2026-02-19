@@ -2,9 +2,6 @@
 # build_srcReader.sh
 set -euo pipefail
 
-#!/usr/bin/env bash
-set -euo pipefail
-
 # load functions/vars into this script
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
