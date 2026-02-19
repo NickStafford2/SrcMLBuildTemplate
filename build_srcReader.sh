@@ -23,6 +23,7 @@ echo ""
 # Prereqs
 echo "=== [1/4] Checking prerequisites ==="
 require_build_tools
+require_boost
 
 # Sanity checks
 echo "=== [2/4] Checking directories ==="

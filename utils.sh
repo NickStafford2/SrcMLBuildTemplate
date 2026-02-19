@@ -57,3 +57,17 @@ resolve_ws() {
     echo "$script_dir"
   fi
 }
+
+require_boost() {
+  if [ ! -d /usr/include/boost ]; then
+    echo "Boost not found. Installing libboost-all-dev..."
+    require_cmd sudo
+    sudo apt-get update
+    sudo apt-get install -y libboost-all-dev
+    echo "✓ Boost installed"
+    echo ""
+  else
+    echo "✓ Boost headers found"
+    echo ""
+  fi
+}
