@@ -1,0 +1,22 @@
+{
+  "version": "0.1.0",
+  "configurations": [
+    {
+      "name": "srcDiff (workspace root)",
+      "type": "codelldb",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "program": "${workspaceFolder}/build/bin/srcdiff",
+      "args": [
+        "test/move/test_a.cpp",
+        "test/move/test_b.cpp",
+        "-o",
+        "test/move/out.xml"
+      ],
+      "terminal": "integrated",
+      "stopOnEntry": false,
+      "breakOnException": false,
+      "exceptionBreakpoints": []
+    }
+  ]
+}
