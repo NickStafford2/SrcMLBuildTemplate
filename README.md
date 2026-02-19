@@ -1,14 +1,15 @@
 # srcML & srcDiff Build Template
+Installer for srcML, srcDiff, srcReader, srcMove, srcReader developer environments. 
 
-## They’re more what you’d call Guidelines than actual Code
+## They’re more what you’d call Guidelines
 
-I had trouble getting the **official** srcML and srcDiff build instructions to behave on my machines, so I wrote this script instead.
+The official srcML and srcDiff build instructions can be extremely difficult to set up. Quirks with Cmake, Ninja, and directories paths are all handled automatically.
 
 Think of it as a *friendly guideline* for installing srcML and srcDiff on a normal Debian/Ubuntu Linux setup. You can download these, run them in sequence, and change them where they don't work. Update these templates if requirements change.
 
-## What this project includes
+## Includes
 
-This repo bundles three small scripts:
+This repo bundles many scripts:
 
 * `prereq_install_ubuntu.sh`
   Installs all packages needed to build srcML + srcDiff from source (including Kitware’s CMake).
@@ -16,6 +17,8 @@ This repo bundles three small scripts:
   Builds srcML using its official `ci-ubuntu` preset and installs it locally into a workspace directory.
 * `build_srcDiff.sh`
   Builds srcDiff against the locally-installed srcML and handles the *required* submodule updates.
+  
+Includesh configuration for debug adapter protocols. 
 
 These scripts are meant to make things **reproducible**, **simple**, and **non-destructive**.
 Everything installs into your chosen workspace — *no* system-wide pollution.
