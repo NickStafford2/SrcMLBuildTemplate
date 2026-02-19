@@ -1,15 +1,8 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+set -euo pipefail
 
-#############################################
-# Helpers
-#############################################
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "✗ Missing required command: $1" >&2
-    exit 1
-  fi
-}
+# load functions/vars into this script
+source "$(dirname "$0")/utils.sh"
 
 #############################################
 # Workspace Resolution
@@ -132,10 +125,11 @@ cmake -S "$SRCDIFF" \
   -B "$BUILDDIR" \
   -G Ninja \
   -DsrcML_DIR="$SRCML_CMAKE_DIR" \
-  -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
+
+# -DCMAKE_BUILD_TYPE=Debug \
 
 echo "✓ CMake configure complete"
 echo ""
