@@ -22,11 +22,13 @@ require_build_tools() {
 
 confirm_clean_builddir() {
   local builddir="$1"
+
   if [ -d "$builddir" ]; then
     echo "Existing build directory detected:"
     echo "  $builddir"
     echo ""
     read -r -p "Delete and rebuild from scratch? Type 'y' or 'yes' to continue: " CONFIRM
+    local CONFIRM_LC
     CONFIRM_LC="$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]')"
     case "$CONFIRM_LC" in
     y | ye | yes) ;;
@@ -35,12 +37,12 @@ confirm_clean_builddir() {
       exit 1
       ;;
     esac
-
     rm -rf "$builddir"
-    mkdir -p "$builddir"
-    echo "✓ Build directory ready: $builddir"
-    echo ""
   fi
+
+  mkdir -p "$builddir"
+  echo "✓ Build directory ready: $builddir"
+  echo ""
 }
 
 resolve_ws() {
