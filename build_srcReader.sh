@@ -41,11 +41,18 @@ cmake -S "$SRCREADER" \
   -B "$BUILDDIR" \
   -G Ninja \
   -DSRCML_INSTALL_PREFIX="$SRCML_INSTALL" \
-  -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=clang++ \
-  -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
+  -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+  -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
+  -DCMAKE_CXX_FLAGS_DEBUG="-O0 -g3 -gdwarf-4 -fstandalone-debug -fno-omit-frame-pointer" \
+  -DCMAKE_EXE_LINKER_FLAGS_DEBUG="-g" \
+  -DCMAKE_SHARED_LINKER_FLAGS_DEBUG="-g"
+# -DCMAKE_BUILD_TYPE=Release \
 
 ninja -C "$BUILDDIR"
 echo "✓ Build complete"
 echo ""
 echo "Built libs at: $BUILDDIR/bin/"
+
+link_compile_commands "$BUILDDIR" "$SRCREADER"

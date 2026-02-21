@@ -52,10 +52,13 @@ echo "=== [4/4] Configuring + building srcMove ==="
 cmake -S "$SRCMOVE" \
   -B "$BUILDDIR" \
   -G Ninja \
-  -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
+  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
   -DCMAKE_BUILD_TYPE=Debug \
+  -DCMAKE_CXX_FLAGS_DEBUG="-O0 -g3 -gdwarf-4 -fstandalone-debug -fno-omit-frame-pointer" \
+  -DCMAKE_EXE_LINKER_FLAGS_DEBUG="-g" \
+  -DCMAKE_SHARED_LINKER_FLAGS_DEBUG="-g" \
   -DWORKSPACE_ROOT="$WS"
 
 ninja -C "$BUILDDIR"
@@ -63,3 +66,5 @@ ninja -C "$BUILDDIR"
 echo ""
 echo "✓ Build complete"
 echo "Built srcMove at: $BUILDDIR/srcMove"
+
+link_compile_commands "$BUILDDIR" "$SRCMOVE"
