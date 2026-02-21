@@ -71,3 +71,19 @@ require_boost() {
     echo ""
   fi
 }
+
+# Ensure compile_commands.json is available at project root for clangd.
+link_compile_commands() {
+  local builddir="$1"
+  local project_root="$2"
+
+  local cc="$builddir/compile_commands.json"
+  if [ -f "$cc" ]; then
+    ln -sf "$cc" "$project_root/compile_commands.json"
+    echo "✓ Linked compile_commands.json -> $project_root/compile_commands.json"
+  else
+    echo "✗ compile_commands.json not found at: $cc"
+    echo "  Did CMake configure run with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON ?"
+    exit 1
+  fi
+}
