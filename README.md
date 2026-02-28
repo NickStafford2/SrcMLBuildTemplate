@@ -1,5 +1,5 @@
 # srcML & srcDiff Build Template
-Installer for srcML, srcDiff, srcReader, srcMove, srcReader developer environments. 
+Installer for srcML, srcDiff, srcReader, srcMove, srcReader developer environments. Easy to configure for your development environment. Manage all your projects related to srcML in one place.
 
 ## They’re more what you’d call Guidelines
 
