@@ -1,0 +1,5 @@
+export PATH="$HOME/Projects/srcMLBuildTemplate/srcML-install/bin:$PATH"
+export PATH="$HOME/Projects/srcMLBuildTemplate/srcML-install/lib:$PATH"
+export PATH="$HOME/Projects/srcMLBuildTemplate/srcMove/build:$PATH"
+export PATH="$HOME/Projects/srcMLBuildTemplate/srcDiff/build/bin:$PATH"
+export PATH="$HOME/Projects/srcMLBuildTemplate/srcReader/build/bin:$PATH"
