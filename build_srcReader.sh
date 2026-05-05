@@ -6,7 +6,45 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/utils.sh"
 
-WS="$(resolve_ws "${1:-}")"
+usage() {
+  cat <<'EOF'
+Usage: ./build_srcReader.sh [--yes|-y] [workspace]
+
+  --yes, -y   Skip the interactive confirmation before wiping the build directory.
+  workspace   Optional workspace directory. Defaults to this script's directory.
+EOF
+}
+
+AUTO_YES=0
+WS_ARG=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  -y | --yes)
+    AUTO_YES=1
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  -*)
+    echo "✗ Unknown option: $1"
+    usage
+    exit 1
+    ;;
+  *)
+    if [ -n "$WS_ARG" ]; then
+      echo "✗ Unexpected extra argument: $1"
+      usage
+      exit 1
+    fi
+    WS_ARG="$1"
+    ;;
+  esac
+  shift
+done
+
+WS="$(resolve_ws "$WS_ARG")"
 echo "=== Workspace: $WS ==="
 
 SRCREADER="$WS/srcReader"

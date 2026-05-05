@@ -18,19 +18,53 @@ set -euo pipefail
 # Helpers
 #############################################
 
-require_cmd() {
-  if ! command -v "$1" >/dev/null 2>&1; then
-    echo "✗ Missing required command: $1" >&2
-    exit 1
-  fi
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/utils.sh"
+
+usage() {
+  cat <<'EOF'
+Usage: ./build_srcML.sh [--yes|-y] [workspace]
+
+  --yes, -y   Skip the interactive confirmation before wiping build directories.
+  workspace   Optional workspace directory. Defaults to the current directory.
+EOF
 }
+
+AUTO_YES=0
+WS_ARG=""
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+  -y | --yes)
+    AUTO_YES=1
+    ;;
+  -h | --help)
+    usage
+    exit 0
+    ;;
+  -*)
+    echo "✗ Unknown option: $1"
+    usage
+    exit 1
+    ;;
+  *)
+    if [ -n "$WS_ARG" ]; then
+      echo "✗ Unexpected extra argument: $1"
+      usage
+      exit 1
+    fi
+    WS_ARG="$1"
+    ;;
+  esac
+  shift
+done
 
 #############################################
 # Workspace Resolution
 #############################################
 
-if [ -n "${1:-}" ]; then
-  WS="$1"
+if [ -n "$WS_ARG" ]; then
+  WS="$WS_ARG"
   echo "=== Using user-provided workspace: $WS ==="
 else
   WS="$(pwd)"
@@ -84,19 +118,8 @@ echo "These directories will be permanently deleted (if they exist):"
 echo "  $BUILDDIR"
 echo "  $INSTALLDIR"
 echo ""
-read -r -p "Type 'y' or 'yes' to continue: " CONFIRM
-
-CONFIRM_LC="$(printf '%s' "$CONFIRM" | tr '[:upper:]' '[:lower:]')"
-
-case "$CONFIRM_LC" in
-y | ye | yes)
-  echo "✓ User confirmed directory removal"
-  ;;
-*)
-  echo "✗ Confirmation not received — aborting."
-  exit 1
-  ;;
-esac
+confirm_or_exit
+echo "✓ Directory reset confirmed"
 echo ""
 
 #############################################

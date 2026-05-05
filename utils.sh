@@ -20,6 +20,29 @@ require_build_tools() {
   echo ""
 }
 
+confirm_or_exit() {
+  local prompt="${1:-Type 'y' or 'yes' to continue: }"
+
+  if [ "${AUTO_YES:-0}" = "1" ]; then
+    echo "✓ Auto-confirm enabled (--yes); continuing"
+    return
+  fi
+
+  local confirm
+  read -r -p "$prompt" confirm
+
+  local confirm_lc
+  confirm_lc="$(printf '%s' "$confirm" | tr '[:upper:]' '[:lower:]')"
+
+  case "$confirm_lc" in
+  y | ye | yes) ;;
+  *)
+    echo "✗ Confirmation not received — aborting."
+    exit 1
+    ;;
+  esac
+}
+
 confirm_clean_builddir() {
   local builddir="$1"
 
@@ -27,16 +50,7 @@ confirm_clean_builddir() {
     echo "Existing build directory detected:"
     echo "  $builddir"
     echo ""
-    read -r -p "Delete and rebuild from scratch? Type 'y' or 'yes' to continue: " CONFIRM
-    local CONFIRM_LC
-    CONFIRM_LC="$(echo "$CONFIRM" | tr '[:upper:]' '[:lower:]')"
-    case "$CONFIRM_LC" in
-    y | ye | yes) ;;
-    *)
-      echo "✗ Confirmation not received — aborting."
-      exit 1
-      ;;
-    esac
+    confirm_or_exit "Delete and rebuild from scratch? Type 'y' or 'yes' to continue: "
     rm -rf "$builddir"
   fi
 
