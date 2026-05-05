@@ -42,6 +42,7 @@ sudo apt-get install --no-install-recommends -y \
   g++ \
   git \
   libarchive-dev \
+  libboost-all-dev \
   libcurl4-openssl-dev \
   libxml2-dev \
   libxml2-utils \
