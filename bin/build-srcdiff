@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 WS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [ "${SRCDIFF_DEBUG:-0}" = "1" ]; then
+  exec "$WS/srcDiff/build-debug/bin/srcdiff" "$@"
+fi
+
 exec "$WS/srcDiff/build/bin/srcdiff" "$@"

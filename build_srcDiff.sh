@@ -22,11 +22,27 @@ echo ""
 #############################################
 SRCDIFF="$WS/srcDiff"
 SRCML_INSTALL="$WS/srcML-install"
-BUILDDIR="$SRCDIFF/build"
 SRCML_CMAKE_DIR="$SRCML_INSTALL/share/cmake/srcml"
+
+case "${SRCDIFF_DEBUG:-0}" in
+0)
+  BUILD_TYPE="Release"
+  BUILDDIR="$SRCDIFF/build"
+  ;;
+1)
+  BUILD_TYPE="Debug"
+  BUILDDIR="$SRCDIFF/build-debug"
+  ;;
+*)
+  echo "✗ Invalid SRCDIFF_DEBUG value: ${SRCDIFF_DEBUG}"
+  echo "  Use SRCDIFF_DEBUG=1 for a debug build, or leave it unset for the default optimized build."
+  exit 1
+  ;;
+esac
 
 echo "srcDiff source:         $SRCDIFF"
 echo "srcML install (cmake):  $SRCML_CMAKE_DIR"
+echo "Build type:             $BUILD_TYPE"
 echo "Build directory:        $BUILDDIR"
 echo ""
 
@@ -125,11 +141,10 @@ cmake -S "$SRCDIFF" \
   -B "$BUILDDIR" \
   -G Ninja \
   -DsrcML_DIR="$SRCML_CMAKE_DIR" \
+  -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
   -DCMAKE_C_COMPILER=clang \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
-
-# -DCMAKE_BUILD_TYPE=Debug \
 
 echo "✓ CMake configure complete"
 echo ""
@@ -142,5 +157,5 @@ ninja -C "$BUILDDIR"
 echo "✓ Build complete"
 
 echo ""
-echo "Built srcDiff at: $BUILDDIR/bin/srcdiff"
+echo "Built $BUILD_TYPE srcDiff at: $BUILDDIR/bin/srcdiff"
 echo "=== All steps finished successfully ==="

@@ -64,12 +64,19 @@ Everything installs into your chosen workspace — *no* system-wide pollution.
    ./build_srcDiff.sh
    ```
 
+   For a debug build instead:
+
+   ```bash
+   SRCDIFF_DEBUG=1 ./build_srcDiff.sh
+   ```
+
    This script:
 
    * ensures the srcDiff repo exists
    * pulls/update submodules (**mandatory**)
    * configures using `-DsrcML_DIR=.../srcML-install/share/cmake/srcml`
-   * builds using Ninja
+   * builds optimized `Release` by default in `./srcDiff/build`
+   * uses `SRCDIFF_DEBUG=1` for a `Debug` build in `./srcDiff/build-debug`
 
 ## Notes & Expectations
 

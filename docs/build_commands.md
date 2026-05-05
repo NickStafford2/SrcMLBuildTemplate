@@ -23,6 +23,12 @@ Build `srcDiff` against the local `srcML` install:
 ./build_srcDiff.sh
 ```
 
+Build a debug `srcDiff` in `srcDiff/build-debug`:
+
+```bash
+SRCDIFF_DEBUG=1 ./build_srcDiff.sh
+```
+
 Build `srcReader`:
 
 ```bash
