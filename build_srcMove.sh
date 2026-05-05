@@ -6,25 +6,35 @@ source "$SCRIPT_DIR/utils.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./build_srcMove.sh [--yes|-y] [workspace]
+Usage: ./build_srcMove.sh [--yes|-y] [--debug|--release] [workspace]
 
   --yes, -y   Skip the interactive confirmation before wiping the build directory.
+  --debug     Build a Debug configuration in ./srcMove/build-debug.
+  --release   Build a Release configuration in ./srcMove/build.
   workspace   Optional workspace directory. Defaults to this script's directory.
 
 Environment:
   SRCMOVE_DEBUG=1     Build a Debug configuration in ./srcMove/build-debug.
                       Default is Release in ./srcMove/build.
+                      CLI flags override this environment variable.
   SRCREADER_DEBUG=1   Link against ./srcReader/build-debug instead of ./srcReader/build.
 EOF
 }
 
 AUTO_YES=0
 WS_ARG=""
+BUILD_MODE_OVERRIDE=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
   -y | --yes)
     AUTO_YES=1
+    ;;
+  --debug)
+    BUILD_MODE_OVERRIDE="Debug"
+    ;;
+  --release)
+    BUILD_MODE_OVERRIDE="Release"
     ;;
   -h | --help)
     usage
@@ -55,18 +65,33 @@ SRCMOVE="$WS/srcMove"
 SRCREADER="$WS/srcReader"
 SRCML_INSTALL="$WS/srcML-install"
 
-case "${SRCMOVE_DEBUG:-0}" in
-0)
-  BUILD_TYPE="Release"
+if [ -n "$BUILD_MODE_OVERRIDE" ]; then
+  BUILD_TYPE="$BUILD_MODE_OVERRIDE"
+else
+  case "${SRCMOVE_DEBUG:-0}" in
+  0)
+    BUILD_TYPE="Release"
+    ;;
+  1)
+    BUILD_TYPE="Debug"
+    ;;
+  *)
+    echo "✗ Invalid SRCMOVE_DEBUG value: ${SRCMOVE_DEBUG}"
+    echo "  Use SRCMOVE_DEBUG=1 for a debug build, or leave it unset for the default optimized build."
+    exit 1
+    ;;
+  esac
+fi
+
+case "$BUILD_TYPE" in
+Release)
   BUILDDIR="$SRCMOVE/build"
   ;;
-1)
-  BUILD_TYPE="Debug"
+Debug)
   BUILDDIR="$SRCMOVE/build-debug"
   ;;
 *)
-  echo "✗ Invalid SRCMOVE_DEBUG value: ${SRCMOVE_DEBUG}"
-  echo "  Use SRCMOVE_DEBUG=1 for a debug build, or leave it unset for the default optimized build."
+  echo "✗ Invalid build type: $BUILD_TYPE"
   exit 1
   ;;
 esac
