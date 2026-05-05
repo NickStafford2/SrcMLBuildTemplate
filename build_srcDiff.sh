@@ -92,6 +92,8 @@ require_cmd git
 
 if [ -d "$SRCDIFF/.git" ]; then
   echo "↻ srcDiff repo already exists — skipping clone"
+elif [ -f "$SRCDIFF/CMakeLists.txt" ]; then
+  echo "↻ srcDiff source directory already exists without git metadata — skipping clone"
 else
   echo "Cloning srcDiff into: $SRCDIFF"
   git clone https://github.com/srcML/srcDiff.git "$SRCDIFF"
@@ -103,11 +105,15 @@ echo ""
 # Update submodules
 #############################################
 echo "=== [2/7] Updating srcDiff submodules ==="
-(
-  cd "$SRCDIFF"
-  git submodule update --init --recursive
-)
-echo "✓ Submodules updated"
+if [ -d "$SRCDIFF/.git" ]; then
+  (
+    cd "$SRCDIFF"
+    git submodule update --init --recursive
+  )
+  echo "✓ Submodules updated"
+else
+  echo "↻ No git metadata available — skipping submodule update"
+fi
 echo ""
 
 #############################################

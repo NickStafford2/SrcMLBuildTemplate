@@ -114,6 +114,8 @@ echo ""
 echo "=== [1/6] Checking for srcML repository ==="
 if [ -d "$SRCML/.git" ]; then
   echo "↻ srcML repo already exists — skipping clone"
+elif [ -f "$SRCML/CMakeLists.txt" ]; then
+  echo "↻ srcML source directory already exists without git metadata — skipping clone"
 else
   echo "Cloning srcML into: $SRCML"
   git clone https://github.com/srcML/srcML.git "$SRCML"
