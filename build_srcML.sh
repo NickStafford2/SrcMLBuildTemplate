@@ -176,7 +176,7 @@ echo ""
 #############################################
 
 echo "=== [6/6] Installing srcML ==="
-cmake --install .
+cmake --install "$BUILDDIR"
 echo "✓ Installation complete"
 echo ""
 
