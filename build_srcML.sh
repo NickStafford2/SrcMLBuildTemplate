@@ -23,20 +23,31 @@ source "$SCRIPT_DIR/utils.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./build_srcML.sh [--yes|-y] [workspace]
+Usage: ./build_srcML.sh [--yes|-y] [--preset <name>] [workspace]
 
   --yes, -y   Skip the interactive confirmation before wiping build directories.
+  --preset    CMake configure/build preset to use for srcML. Defaults to `ci-ubuntu`.
   workspace   Optional workspace directory. Defaults to the current directory.
 EOF
 }
 
 AUTO_YES=0
 WS_ARG=""
+SRCML_PRESET="ci-ubuntu"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
   -y | --yes)
     AUTO_YES=1
+    ;;
+  --preset)
+    if [ "$#" -lt 2 ]; then
+      echo "✗ --preset requires a value"
+      usage
+      exit 1
+    fi
+    SRCML_PRESET="$2"
+    shift
     ;;
   -h | --help)
     usage
@@ -83,6 +94,7 @@ INSTALLDIR="$WS/srcML-install"
 echo "srcML source:      $SRCML"
 echo "Build directory:   $BUILDDIR"
 echo "Install location:  $INSTALLDIR"
+echo "CMake preset:      $SRCML_PRESET"
 echo ""
 
 #############################################
@@ -137,12 +149,12 @@ echo ""
 #############################################
 
 echo "=== [4/6] Configuring srcML with CMake ==="
-cd "$BUILDDIR"
-
-cmake \
-  -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_INSTALL_PREFIX="$INSTALLDIR" \
-  "$SRCML"
+(
+  cd "$SRCML"
+  cmake \
+    --preset "$SRCML_PRESET" \
+    -DCMAKE_INSTALL_PREFIX="$INSTALLDIR"
+)
 
 echo "✓ CMake configure complete"
 echo ""
@@ -152,7 +164,10 @@ echo ""
 #############################################
 
 echo "=== [5/6] Building srcML ==="
-cmake --build . --parallel
+(
+  cd "$SRCML"
+  cmake --build --preset "$SRCML_PRESET"
+)
 echo "✓ Build complete"
 echo ""
 
