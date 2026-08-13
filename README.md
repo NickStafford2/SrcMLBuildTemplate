@@ -71,8 +71,16 @@ The same workflow is available through `make` targets:
 ```bash
 make shell
 make build
+make build-dev
+make build-release
+make build-production
 make test
 ```
+
+`make build` is an alias for `make build-release`. Use `make build-dev` when
+you want debuggable local binaries for development. Use `make build-production`
+when you want the slower release/test/package-oriented path supported by
+`srcML` and `srcDiff`.
 
 After changing the `Dockerfile`, rebuild the image with:
 

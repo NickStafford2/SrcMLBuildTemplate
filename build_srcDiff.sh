@@ -6,14 +6,20 @@ source "$(dirname "$0")/utils.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./build_srcDiff.sh [--yes|-y] [--preset <name>] [--package] [--test] [--production] [workspace]
+Usage: ./build_srcDiff.sh [--yes|-y] [--debug|--release] [--preset <name>] [--package] [--test] [--production] [workspace]
 
   --yes, -y      Skip the interactive confirmation before wiping the build directory.
+  --debug        Build a Debug configuration.
+  --release      Build a Release configuration.
   --preset       CMake configure preset to use. Defaults to debian, or ci-debian with --production.
   --package      Generate CPack artifacts into <workspace>/srcDiff-dist.
   --test         Run ctest after the build. Uses ci-debian unless --preset is supplied.
   --production   Release-oriented build: ci-debian preset + tests + CPack artifacts + local install.
   workspace      Optional workspace directory. Defaults to this script's directory.
+
+Environment:
+  SRCDIFF_DEBUG=1   Build a Debug configuration. Default is Release.
+                    CLI flags override this environment variable.
 EOF
 }
 
@@ -23,11 +29,18 @@ SRCDIFF_PRESET=""
 RUN_PACKAGE=0
 RUN_TESTS=0
 PRESET_EXPLICIT=0
+BUILD_MODE_OVERRIDE=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
   -y | --yes)
     AUTO_YES=1
+    ;;
+  --debug)
+    BUILD_MODE_OVERRIDE="Debug"
+    ;;
+  --release)
+    BUILD_MODE_OVERRIDE="Release"
     ;;
   --preset)
     if [ "$#" -lt 2 ]; then
@@ -103,21 +116,25 @@ SRCML_CMAKE_DIR="$SRCML_INSTALL/share/cmake/srcml"
 INSTALLDIR="$WS/srcDiff-install"
 DISTDIR="$WS/srcDiff-dist"
 
-case "${SRCDIFF_DEBUG:-0}" in
-0)
-  BUILD_TYPE="Release"
-  BUILDDIR="$SRCDIFF/build"
-  ;;
-1)
-  BUILD_TYPE="Debug"
-  BUILDDIR="$SRCDIFF/build"
-  ;;
-*)
-  echo "✗ Invalid SRCDIFF_DEBUG value: ${SRCDIFF_DEBUG}"
-  echo "  Use SRCDIFF_DEBUG=1 for a debug build, or leave it unset for the default optimized build."
-  exit 1
-  ;;
-esac
+if [ -n "$BUILD_MODE_OVERRIDE" ]; then
+  BUILD_TYPE="$BUILD_MODE_OVERRIDE"
+else
+  case "${SRCDIFF_DEBUG:-0}" in
+  0)
+    BUILD_TYPE="Release"
+    ;;
+  1)
+    BUILD_TYPE="Debug"
+    ;;
+  *)
+    echo "✗ Invalid SRCDIFF_DEBUG value: ${SRCDIFF_DEBUG}"
+    echo "  Use SRCDIFF_DEBUG=1 for a debug build, or leave it unset for the default optimized build."
+    exit 1
+    ;;
+  esac
+fi
+
+BUILDDIR="$SRCDIFF/build"
 
 echo "srcDiff source:         $SRCDIFF"
 echo "srcML install (cmake):  $SRCML_CMAKE_DIR"
@@ -126,6 +143,7 @@ echo "Build directory:        $BUILDDIR"
 echo "Install location:       $INSTALLDIR"
 echo "Package location:       $DISTDIR"
 echo "CMake preset:           $SRCDIFF_PRESET"
+echo "Note: srcDiff presets use a fixed build directory; Debug and Release both use $BUILDDIR"
 echo ""
 
 #############################################

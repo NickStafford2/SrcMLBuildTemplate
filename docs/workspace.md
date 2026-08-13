@@ -140,13 +140,34 @@ The `Makefile` provides easier-to-remember aliases:
 
 ```bash
 make shell           # enter Docker
-make build           # build all workspace tools in Docker
+make build           # alias for make build-release
+make build-dev       # debuggable development build
+make build-release   # optimized local build
+make build-production # release/test/package path where supported
 make test            # run srcMove tests in Docker
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
 
 Use `make docker-rebuild` after editing `Dockerfile` or changing system-level
 dependencies such as compilers, libraries, or Python packages.
+
+## Build Modes
+
+Use `make build-dev` for day-to-day debugging. It builds `srcReader`,
+`srcDiff`, and `srcMove` with `CMAKE_BUILD_TYPE=Debug` where the local scripts
+support it. `srcMove` links against `srcReader/build-debug` in this mode.
+
+Use `make build-release` or `make build` for the normal optimized local build.
+This is the default path and writes the binaries used by the workspace PATH.
+
+Use `make build-production` when you want the release-oriented path that runs
+tests and generates package artifacts where supported. Today, `srcML` and
+`srcDiff` support production package/test behavior; `srcReader` and `srcMove`
+are built as release dependencies.
+
+`srcDiff` is an exception to the separate-directory convention: its upstream
+CMake preset uses `srcDiff/build` as the build directory, so Debug and Release
+srcDiff builds overwrite that same directory.
 
 Run a built tool through Docker from macOS:
 

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+exec "$SCRIPT_DIR/srcml-dev-shell" bash -lc '
+  set -euo pipefail
+  ./build_srcML.sh --yes --production
+  ./build_srcReader.sh --yes --release
+  ./build_srcDiff.sh --yes --production
+  ./build_srcMove.sh --yes --release
+'
