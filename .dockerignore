@@ -9,10 +9,13 @@
 **/node_modules
 **/dist
 srcML-build
+srcML-dist
 srcML-install
 srcDiff/build
 srcDiff/build-debug
 srcDiff/build-release-check
+srcDiff-dist
+srcDiff-install
 srcReader/build
 srcReader/build-debug
 srcMove/build

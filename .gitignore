@@ -1,6 +1,9 @@
 srcDiff/
+srcDiff-dist/
+srcDiff-install/
 srcML/
 srcML-build/
+srcML-dist/
 srcML-install/
 srcDispatch/
 srcMove/

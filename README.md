@@ -14,14 +14,71 @@ This repo bundles many scripts:
 * `prereq_install_ubuntu.sh`
   Installs all packages needed to build srcML + srcDiff from source (including Kitware’s CMake).
 * `build_srcML.sh`
-  Builds srcML using its official `ci-ubuntu` preset and installs it locally into a workspace directory.
+  Builds srcML using its official `ci-ubuntu` preset, installs it locally into a workspace directory, and can generate production package artifacts.
 * `build_srcDiff.sh`
-  Builds srcDiff against the locally-installed srcML and handles the *required* submodule updates.
+  Builds srcDiff against the locally-installed srcML, handles the *required* submodule updates, and can generate production package artifacts.
   
 Includesh configuration for debug adapter protocols. 
 
 These scripts are meant to make things **reproducible**, **simple**, and **non-destructive**.
 Everything installs into your chosen workspace — *no* system-wide pollution.
+
+## macOS + Docker Development
+
+On macOS, keep this checkout on your normal filesystem and edit it with Neovim,
+Codex, or any other Mac editor. Use Docker only for the Ubuntu build
+environment.
+
+Build and enter the dev container:
+
+```bash
+./bin/srcml-dev-shell
+```
+
+The first run builds a local Docker image named `srcml-dev:ubuntu24.04`.
+After that, it starts an Ubuntu 24.04 shell with this repo mounted at
+`/workspace`.
+
+Inside the container, build the tools in order:
+
+```bash
+./build_srcML.sh --yes
+./build_srcReader.sh --yes
+./build_srcDiff.sh --yes
+./build_srcMove.sh --yes
+```
+
+Or run the full build sequence from macOS:
+
+```bash
+./bin/srcml-dev-build
+```
+
+Run the installed `srcml` from inside the container:
+
+```bash
+srcml --version
+srcml --text "int main() { return 0; }" -l C++
+```
+
+Run a tool from macOS through Docker:
+
+```bash
+./bin/srcml-dev-shell srcml --version
+./bin/srcml-dev-shell srcMove --help
+```
+
+The container PATH includes the local build/install directories:
+
+```text
+/workspace/srcML-install/bin
+/workspace/srcDiff/build/bin
+/workspace/srcReader/build/bin
+/workspace/srcMove/build
+```
+
+Your source files stay on macOS. Build outputs are written into this checkout,
+so they are visible to Codex and Neovim, but ignored by git.
 
 ## Usage
 
@@ -58,10 +115,34 @@ Everything installs into your chosen workspace — *no* system-wide pollution.
 
    No sudo, nothing system-wide.
 
+   To make a production srcML build from the currently checked-out development branch:
+
+   ```bash
+   ./build_srcML.sh --production
+   ```
+
+   This uses the same upstream preset, runs tests, installs locally into `./srcML-install`, and writes CPack artifacts to:
+
+   ```
+   ./srcML-dist
+   ```
+
 5. Build srcDiff:
 
    ```bash
    ./build_srcDiff.sh
+   ```
+
+   To make a production srcDiff build from the currently checked-out development branch:
+
+   ```bash
+   ./build_srcDiff.sh --production
+   ```
+
+   This uses the upstream `ci-debian` preset, runs tests, installs locally into `./srcDiff-install`, and writes CPack artifacts to:
+
+   ```
+   ./srcDiff-dist
    ```
 
    For a debug build instead:

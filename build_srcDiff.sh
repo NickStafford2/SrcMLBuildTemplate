@@ -6,20 +6,51 @@ source "$(dirname "$0")/utils.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./build_srcDiff.sh [--yes|-y] [workspace]
+Usage: ./build_srcDiff.sh [--yes|-y] [--preset <name>] [--package] [--test] [--production] [workspace]
 
-  --yes, -y   Skip the interactive confirmation before wiping the build directory.
-  workspace   Optional workspace directory. Defaults to this script's directory.
+  --yes, -y      Skip the interactive confirmation before wiping the build directory.
+  --preset       CMake configure preset to use. Defaults to debian, or ci-debian with --production.
+  --package      Generate CPack artifacts into <workspace>/srcDiff-dist.
+  --test         Run ctest after the build. Uses ci-debian unless --preset is supplied.
+  --production   Release-oriented build: ci-debian preset + tests + CPack artifacts + local install.
+  workspace      Optional workspace directory. Defaults to this script's directory.
 EOF
 }
 
 AUTO_YES=0
 WS_ARG=""
+SRCDIFF_PRESET=""
+RUN_PACKAGE=0
+RUN_TESTS=0
+PRESET_EXPLICIT=0
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
   -y | --yes)
     AUTO_YES=1
+    ;;
+  --preset)
+    if [ "$#" -lt 2 ]; then
+      echo "✗ --preset requires a value"
+      usage
+      exit 1
+    fi
+    SRCDIFF_PRESET="$2"
+    PRESET_EXPLICIT=1
+    shift
+    ;;
+  --package)
+    RUN_PACKAGE=1
+    ;;
+  --test)
+    RUN_TESTS=1
+    ;;
+  --production)
+    RUN_PACKAGE=1
+    RUN_TESTS=1
+    if [ "$PRESET_EXPLICIT" = "0" ]; then
+      SRCDIFF_PRESET="ci-debian"
+    fi
     ;;
   -h | --help)
     usage
@@ -42,6 +73,14 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
+if [ -z "$SRCDIFF_PRESET" ]; then
+  if [ "$RUN_TESTS" = "1" ] || [ "$RUN_PACKAGE" = "1" ]; then
+    SRCDIFF_PRESET="ci-debian"
+  else
+    SRCDIFF_PRESET="debian"
+  fi
+fi
+
 #############################################
 # Workspace Resolution
 #############################################
@@ -61,6 +100,8 @@ echo ""
 SRCDIFF="$WS/srcDiff"
 SRCML_INSTALL="$WS/srcML-install"
 SRCML_CMAKE_DIR="$SRCML_INSTALL/share/cmake/srcml"
+INSTALLDIR="$WS/srcDiff-install"
+DISTDIR="$WS/srcDiff-dist"
 
 case "${SRCDIFF_DEBUG:-0}" in
 0)
@@ -69,7 +110,7 @@ case "${SRCDIFF_DEBUG:-0}" in
   ;;
 1)
   BUILD_TYPE="Debug"
-  BUILDDIR="$SRCDIFF/build-debug"
+  BUILDDIR="$SRCDIFF/build"
   ;;
 *)
   echo "✗ Invalid SRCDIFF_DEBUG value: ${SRCDIFF_DEBUG}"
@@ -82,12 +123,15 @@ echo "srcDiff source:         $SRCDIFF"
 echo "srcML install (cmake):  $SRCML_CMAKE_DIR"
 echo "Build type:             $BUILD_TYPE"
 echo "Build directory:        $BUILDDIR"
+echo "Install location:       $INSTALLDIR"
+echo "Package location:       $DISTDIR"
+echo "CMake preset:           $SRCDIFF_PRESET"
 echo ""
 
 #############################################
 # Clone srcDiff if needed
 #############################################
-echo "=== [1/7] Checking for srcDiff repository ==="
+echo "=== [1/9] Checking for srcDiff repository ==="
 require_cmd git
 
 if [ -d "$SRCDIFF/.git" ]; then
@@ -104,7 +148,7 @@ echo ""
 #############################################
 # Update submodules
 #############################################
-echo "=== [2/7] Updating srcDiff submodules ==="
+echo "=== [2/9] Updating srcDiff submodules ==="
 if [ -d "$SRCDIFF/.git" ]; then
   (
     cd "$SRCDIFF"
@@ -119,9 +163,17 @@ echo ""
 #############################################
 # Sanity Checks
 #############################################
-echo "=== [3/7] Checking prerequisites ==="
+echo "=== [3/9] Checking prerequisites ==="
 require_cmd cmake
 require_cmd ninja
+require_cmd "${SRCDIFF_CC:-clang}"
+require_cmd "${SRCDIFF_CXX:-clang++}"
+if [ "$RUN_TESTS" = "1" ]; then
+  require_cmd ctest
+fi
+if [ "$RUN_PACKAGE" = "1" ]; then
+  require_cmd cpack
+fi
 
 if [ ! -d "$SRCDIFF" ]; then
   echo "✗ srcDiff directory not found at: $SRCDIFF"
@@ -143,10 +195,14 @@ echo ""
 #############################################
 # Build directory check (prompt only if exists)
 #############################################
-echo "=== [4/7] Build directory check ==="
+echo "=== [4/9] Build directory check ==="
 if [ -d "$BUILDDIR" ]; then
   echo "Existing build directory detected:"
   echo "  $BUILDDIR"
+  echo "  $INSTALLDIR"
+  if [ "$RUN_PACKAGE" = "1" ]; then
+    echo "  $DISTDIR"
+  fi
   echo ""
   confirm_or_exit "Delete and rebuild from scratch? Type 'y' or 'yes' to continue: "
   echo "✓ Build directory reset confirmed"
@@ -158,8 +214,11 @@ echo ""
 #############################################
 # Clean & Prepare Build Directory
 #############################################
-echo "=== [5/7] Preparing build directory ==="
-rm -rf "$BUILDDIR"
+echo "=== [5/9] Preparing build directory ==="
+rm -rf "$BUILDDIR" "$INSTALLDIR"
+if [ "$RUN_PACKAGE" = "1" ]; then
+  rm -rf "$DISTDIR"
+fi
 mkdir -p "$BUILDDIR"
 echo "✓ Build directory ready: $BUILDDIR"
 echo ""
@@ -167,17 +226,18 @@ echo ""
 #############################################
 # Configure with CMake
 #############################################
-echo "=== [6/7] Configuring srcDiff with CMake ==="
-cd "$BUILDDIR"
-
-cmake -S "$SRCDIFF" \
-  -B "$BUILDDIR" \
-  -G Ninja \
-  -DsrcML_DIR="$SRCML_CMAKE_DIR" \
-  -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
+echo "=== [6/9] Configuring srcDiff with CMake preset ==="
+(
+  cd "$SRCDIFF"
+  cmake \
+    --preset "$SRCDIFF_PRESET" \
+    -DsrcML_DIR="$SRCML_CMAKE_DIR" \
+    -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
+    -DCMAKE_C_COMPILER="${SRCDIFF_CC:-clang}" \
+    -DCMAKE_CXX_COMPILER="${SRCDIFF_CXX:-clang++}" \
+    -DCPACK_OUTPUT_FILE_PREFIX="$DISTDIR" \
+    -DCMAKE_CXX_SCAN_FOR_MODULES=OFF
+)
 
 echo "✓ CMake configure complete"
 echo ""
@@ -185,10 +245,42 @@ echo ""
 #############################################
 # Build srcDiff
 #############################################
-echo "=== [7/7] Building srcDiff (ninja) ==="
+echo "=== [7/9] Building srcDiff ==="
 ninja -C "$BUILDDIR"
 echo "✓ Build complete"
+echo ""
+
+#############################################
+# Test srcDiff
+#############################################
+echo "=== [8/9] Testing srcDiff ==="
+if [ "$RUN_TESTS" = "1" ]; then
+  ctest --test-dir "$BUILDDIR" --output-on-failure
+  echo "✓ Tests complete"
+else
+  echo "↻ Skipping tests (use --test or --production to enable)"
+fi
+echo ""
+
+#############################################
+# Package and install srcDiff
+#############################################
+echo "=== [9/9] Packaging and installing srcDiff ==="
+if [ "$RUN_PACKAGE" = "1" ]; then
+  cpack --config "$BUILDDIR/CPackConfig.cmake" -D "CPACK_COMPONENTS_ALL=DEVLIBS;SRCDIFF" -B "$DISTDIR"
+  echo "✓ Package artifacts written to: $DISTDIR"
+else
+  echo "↻ Skipping package generation (use --package or --production to enable)"
+fi
+
+cmake --install "$BUILDDIR" --prefix "$INSTALLDIR" --component DEVLIBS
+cmake --install "$BUILDDIR" --prefix "$INSTALLDIR" --component SRCDIFF
+echo "✓ Installation complete"
 
 echo ""
 echo "Built $BUILD_TYPE srcDiff at: $BUILDDIR/bin/srcdiff"
+echo "Installed srcDiff at: $INSTALLDIR/bin/srcdiff"
+if [ "$RUN_PACKAGE" = "1" ]; then
+  echo "srcDiff packages: $DISTDIR"
+fi
 echo "=== All steps finished successfully ==="
