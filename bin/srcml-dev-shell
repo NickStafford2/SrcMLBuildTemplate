@@ -4,14 +4,24 @@ set -euo pipefail
 IMAGE_NAME="${SRCML_DEV_IMAGE:-srcml-dev:ubuntu24.04}"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+REBUILD=0
+
+if [ "${1:-}" = "--rebuild" ]; then
+  REBUILD=1
+  shift
+fi
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "error: docker is not installed or not on PATH" >&2
   exit 1
 fi
 
-if ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
-  echo "Docker image '$IMAGE_NAME' not found; building it now."
+if [ "$REBUILD" = "1" ] || ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1; then
+  if [ "$REBUILD" = "1" ]; then
+    echo "Rebuilding Docker image '$IMAGE_NAME'."
+  else
+    echo "Docker image '$IMAGE_NAME' not found; building it now."
+  fi
   docker build \
     --build-arg USER_UID="$(id -u)" \
     --build-arg USER_GID="$(id -g)" \

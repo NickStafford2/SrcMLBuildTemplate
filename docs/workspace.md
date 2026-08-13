@@ -136,6 +136,18 @@ Enter the Ubuntu workspace shell:
 ./bin/srcml-dev-shell
 ```
 
+The `Makefile` provides easier-to-remember aliases:
+
+```bash
+make shell           # enter Docker
+make build           # build all workspace tools in Docker
+make test            # run srcMove tests in Docker
+make docker-rebuild  # rebuild image after Dockerfile changes
+```
+
+Use `make docker-rebuild` after editing `Dockerfile` or changing system-level
+dependencies such as compilers, libraries, or Python packages.
+
 Run a built tool through Docker from macOS:
 
 ```bash

@@ -66,6 +66,20 @@ Or run the full build sequence from macOS:
 ./bin/srcml-dev-build
 ```
 
+The same workflow is available through `make` targets:
+
+```bash
+make shell
+make build
+make test
+```
+
+After changing the `Dockerfile`, rebuild the image with:
+
+```bash
+make docker-rebuild
+```
+
 Run the installed `srcml` from inside the container:
 
 ```bash
