@@ -95,6 +95,10 @@ The combined Docker helper runs that sequence:
 ./bin/srcml-dev-build
 ```
 
+`srcMove` tests are Python-driven. The Docker image installs `python3` so the
+normal `srcMove/build_and_test` and `python3 test/run_all.py` entry points work
+inside the container.
+
 ## Important Paths
 
 `srcMove` defaults `WORKSPACE_ROOT` to the parent directory of the `srcMove`

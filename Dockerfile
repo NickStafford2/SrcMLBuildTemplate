@@ -47,6 +47,7 @@ RUN apt-get update -y \
     ninja-build \
     openjdk-17-jdk-headless \
     pkg-config \
+    python3 \
     ripgrep \
     tree \
     valgrind \
