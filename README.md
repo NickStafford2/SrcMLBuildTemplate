@@ -1,11 +1,19 @@
 # srcML & srcDiff Build Template
-Installer for srcML, srcDiff, srcReader, srcMove, srcReader developer environments. Easy to configure for your development environment. Manage all your projects related to srcML in one place.
+Installer for srcML, srcDiff, srcReader, and srcMove developer environments.
+Easy to configure for your development environment. Manage all your projects
+related to srcML in one place.
 
 ## They’re more what you’d call Guidelines
 
 The official srcML and srcDiff build instructions can be extremely difficult to set up. Quirks with Cmake, Ninja, and directories paths are all handled automatically.
 
 Think of it as a *friendly guideline* for installing srcML and srcDiff on a normal Debian/Ubuntu Linux setup. You can download these, run them in sequence, and change them where they don't work. Update these templates if requirements change.
+
+This repository is a workspace scaffold, not a monorepo. The sibling
+directories such as `srcML/`, `srcDiff/`, `srcReader/`, and `srcMove/` are
+separate git checkouts placed under one workspace so the build scripts can find
+their dependencies. See [Workspace Layout](docs/workspace.md) before changing
+the directory structure or adding new setup scripts.
 
 ## Includes
 
@@ -17,6 +25,10 @@ This repo bundles many scripts:
   Builds srcML using its official `ci-ubuntu` preset, installs it locally into a workspace directory, and can generate production package artifacts.
 * `build_srcDiff.sh`
   Builds srcDiff against the locally-installed srcML, handles the *required* submodule updates, and can generate production package artifacts.
+* `build_srcReader.sh`
+  Builds the sibling `srcReader` checkout against the local `srcML-install`.
+* `build_srcMove.sh`
+  Builds the sibling `srcMove` checkout against `srcReader` and `srcML-install`.
   
 Includesh configuration for debug adapter protocols. 
 
@@ -79,6 +91,9 @@ The container PATH includes the local build/install directories:
 
 Your source files stay on macOS. Build outputs are written into this checkout,
 so they are visible to Codex and Neovim, but ignored by git.
+
+For the full dependency layout, clone behavior, and path assumptions, see
+[Workspace Layout](docs/workspace.md).
 
 ## Usage
 
@@ -159,6 +174,24 @@ so they are visible to Codex and Neovim, but ignored by git.
    * builds optimized `Release` by default in `./srcDiff/build`
    * uses `SRCDIFF_DEBUG=1` for a `Debug` build in `./srcDiff/build-debug`
 
+6. Build srcReader:
+
+   ```bash
+   ./build_srcReader.sh
+   ```
+
+   This expects `./srcReader` to already be a checkout and links it against the
+   local `./srcML-install`.
+
+7. Build srcMove:
+
+   ```bash
+   ./build_srcMove.sh
+   ```
+
+   This expects `./srcMove` and `./srcReader` to already be sibling checkouts.
+   It links against `./srcReader/build` and `./srcML-install`.
+
 ## Notes & Expectations
 
 * These scripts intentionally reinstall nothing system-wide except CMake (which Ubuntu often ships outdated).
@@ -171,6 +204,9 @@ so they are visible to Codex and Neovim, but ignored by git.
 * Only tested on Ubuntu 24.04/22.04.
 * Requires `sudo` once (for package install + Kitware repo).
 * The scripts expect a sane workspace layout, but they don’t enforce it — they just use the directory they’re in unless you pass a path explicitly.
+* `build_srcML.sh` and `build_srcDiff.sh` can clone their upstream repos if
+  missing. `build_srcReader.sh` and `build_srcMove.sh` require existing sibling
+  checkouts.
 
 ## Final Thoughts
 
