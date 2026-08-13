@@ -67,3 +67,21 @@ checkouts.
 
 `srcMove` also has its own agent guidance at [srcMove/AGENTS.md](srcMove/AGENTS.md).
 When working inside `srcMove`, follow both this file and the nested guidance.
+
+## Working directory
+Unless otherwise stated, you should work in the srcMove/ directory. You may sometimes 
+work in srcVisual. And on rare occasion srcReader. The user is a developer on all three.
+Most work is in the srcMove directory. Do not randomly try to write a master's thesis 
+for the user. He will ask if he wants assistance on that.
+
+## Continious Improvement
+
+AI Agents are highly encouraged to give the user suggestions that will improve the
+quality of the documentaiton and the repo in general. If anything is difficult to 
+understand, give the user suggestions. The immediate priority of this whole application
+is to produce quality results for a Master's Thesis for srcMove and srcVisual. These 
+are move detection tools that build upon srdML and srcDiff. The user cares deeply about
+elegance, folowing best practices, understandability, and simplicity. The user wants 
+quality docs that do not repeat the same thing multiple times. Single source of truth is 
+essential. We do not ever want multiple docs needlessly repeating the same thing. Brevity 
+is key.
