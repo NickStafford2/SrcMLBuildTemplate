@@ -60,7 +60,8 @@ XML streams.
 
 ## Clone Behavior
 
-The build scripts do not all clone their source repositories.
+The standard bootstrap scripts clone their source repositories when the expected
+directory is missing.
 
 `build_srcML.sh` clones `srcML/` from `https://github.com/srcML/srcML.git` if
 the directory does not already exist.
@@ -68,15 +69,17 @@ the directory does not already exist.
 `build_srcDiff.sh` clones `srcDiff/` from `https://github.com/srcML/srcDiff.git`
 if the directory does not already exist, then updates srcDiff submodules.
 
-`build_srcReader.sh` expects `srcReader/` to already exist and contain a
-`CMakeLists.txt`.
+`build_srcReader.sh` clones `srcReader/` from
+`https://github.com/srcML/srcReader.git` if the directory does not already
+exist. Override with `SRCREADER_REPO_URL` when needed.
 
-`build_srcMove.sh` expects `srcMove/` to already exist and contain a
-`CMakeLists.txt`.
+`build_srcMove.sh` clones `srcMove/` from
+`https://github.com/NickStafford2/srcMove.git` if the directory does not already
+exist. Override with `SRCMOVE_REPO_URL` when needed.
 
-If a future agent needs to recreate a full workspace from scratch, it must know
-where the `srcReader` and `srcMove` repositories live before those two build
-scripts can succeed.
+`build_srcDispatch.sh` is intentionally not part of the standard bootstrap path
+yet. It exits with a clear message instead of sourcing missing placeholder
+files.
 
 ## Build Order
 

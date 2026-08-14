@@ -14,6 +14,8 @@ Usage: ./build_srcMove.sh [--yes|-y] [--debug|--release] [workspace]
   workspace   Optional workspace directory. Defaults to this script's directory.
 
 Environment:
+  SRCMOVE_REPO_URL    Repository URL used when ./srcMove is missing.
+                      Default: https://github.com/NickStafford2/srcMove.git
   SRCMOVE_DEBUG=1     Build a Debug configuration in ./srcMove/build-debug.
                       Default is Release in ./srcMove/build.
                       CLI flags override this environment variable.
@@ -64,6 +66,7 @@ echo "=== Workspace: $WS ==="
 SRCMOVE="$WS/srcMove"
 SRCREADER="$WS/srcReader"
 SRCML_INSTALL="$WS/srcML-install"
+SRCMOVE_REPO_URL="${SRCMOVE_REPO_URL:-https://github.com/NickStafford2/srcMove.git}"
 
 if [ -n "$BUILD_MODE_OVERRIDE" ]; then
   BUILD_TYPE="$BUILD_MODE_OVERRIDE"
@@ -118,9 +121,30 @@ echo "srcReader build dir:    $SRCREADER_BUILDDIR"
 echo "srcML-install:          $SRCML_INSTALL"
 echo ""
 
-echo "=== [1/4] Checking prerequisites ==="
+echo "=== [1/5] Checking prerequisites ==="
+require_cmd git
 require_build_tools
 require_boost # if you added this earlier; safe even if srcMove doesn't include boost yet
+
+echo "=== [2/5] Checking for srcMove repository ==="
+if [ -d "$SRCMOVE/.git" ]; then
+  echo "↻ srcMove repo already exists — skipping clone"
+elif [ -f "$SRCMOVE/CMakeLists.txt" ]; then
+  echo "↻ srcMove source directory already exists without git metadata — skipping clone"
+else
+  echo "Cloning srcMove into: $SRCMOVE"
+  git clone "$SRCMOVE_REPO_URL" "$SRCMOVE"
+  echo "✓ srcMove repository cloned"
+fi
+echo ""
+
+echo "=== [3/5] Checking directories ==="
+if [ ! -f "$SRCMOVE/CMakeLists.txt" ]; then
+  echo "✗ CMakeLists.txt not found at: $SRCMOVE/CMakeLists.txt"
+  exit 1
+fi
+echo "✓ srcMove directory looks valid"
+echo ""
 
 # ensure deps exist
 if [ ! -f "$SRCREADER_BUILDDIR/bin/libsrcreader.so" ] && [ ! -f "$SRCREADER_BUILDDIR/bin/libsrcreader.a" ]; then
@@ -136,18 +160,10 @@ if [ ! -d "$SRCML_INSTALL/include" ] || [ ! -d "$SRCML_INSTALL/lib" ]; then
   exit 1
 fi
 
-echo "=== [2/4] Checking directories ==="
-if [ ! -f "$SRCMOVE/CMakeLists.txt" ]; then
-  echo "✗ CMakeLists.txt not found at: $SRCMOVE/CMakeLists.txt"
-  exit 1
-fi
-echo "✓ srcMove directory looks valid"
-echo ""
-
-echo "=== [3/4] Build directory check ==="
+echo "=== [4/5] Build directory check ==="
 confirm_clean_builddir "$BUILDDIR"
 
-echo "=== [4/4] Configuring + building srcMove ==="
+echo "=== [5/5] Configuring + building srcMove ==="
 cmake_args=(
   -S "$SRCMOVE"
   -B "$BUILDDIR"

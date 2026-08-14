@@ -16,6 +16,8 @@ Usage: ./build_srcReader.sh [--yes|-y] [--debug|--release] [workspace]
   workspace   Optional workspace directory. Defaults to this script's directory.
 
 Environment:
+  SRCREADER_REPO_URL  Repository URL used when ./srcReader is missing.
+                      Default: https://github.com/srcML/srcReader.git
   SRCREADER_DEBUG=1   Build a Debug configuration in ./srcReader/build-debug.
                       Default is Release in ./srcReader/build.
                       CLI flags override this environment variable.
@@ -63,6 +65,7 @@ echo "=== Workspace: $WS ==="
 
 SRCREADER="$WS/srcReader"
 SRCML_INSTALL="$WS/srcML-install"
+SRCREADER_REPO_URL="${SRCREADER_REPO_URL:-https://github.com/srcML/srcReader.git}"
 
 if [ -n "$BUILD_MODE_OVERRIDE" ]; then
   BUILD_TYPE="$BUILD_MODE_OVERRIDE"
@@ -101,12 +104,26 @@ echo "Build directory:        $BUILDDIR"
 echo ""
 
 # Prereqs
-echo "=== [1/4] Checking prerequisites ==="
+echo "=== [1/5] Checking prerequisites ==="
+require_cmd git
 require_build_tools
 require_boost
 
+# Clone if needed
+echo "=== [2/5] Checking for srcReader repository ==="
+if [ -d "$SRCREADER/.git" ]; then
+  echo "↻ srcReader repo already exists — skipping clone"
+elif [ -f "$SRCREADER/CMakeLists.txt" ]; then
+  echo "↻ srcReader source directory already exists without git metadata — skipping clone"
+else
+  echo "Cloning srcReader into: $SRCREADER"
+  git clone "$SRCREADER_REPO_URL" "$SRCREADER"
+  echo "✓ srcReader repository cloned"
+fi
+echo ""
+
 # Sanity checks
-echo "=== [2/4] Checking directories ==="
+echo "=== [3/5] Checking directories ==="
 if [ ! -f "$SRCREADER/CMakeLists.txt" ]; then
   echo "✗ srcReader CMakeLists.txt not found at: $SRCREADER"
   exit 1
@@ -115,11 +132,11 @@ echo "✓ srcReader directory looks valid"
 echo ""
 
 # Build dir check + clean
-echo "=== [3/4] Build directory check ==="
+echo "=== [4/5] Build directory check ==="
 confirm_clean_builddir "$BUILDDIR"
 
 # Configure + build
-echo "=== [4/4] Configuring + building srcReader ==="
+echo "=== [5/5] Configuring + building srcReader ==="
 cmake_args=(
   -S "$SRCREADER"
   -B "$BUILDDIR"

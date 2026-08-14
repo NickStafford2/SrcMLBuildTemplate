@@ -194,7 +194,9 @@ For the full dependency layout, clone behavior, and path assumptions, see
    * pulls/update submodules (**mandatory**)
    * configures using `-DsrcML_DIR=.../srcML-install/share/cmake/srcml`
    * builds optimized `Release` by default in `./srcDiff/build`
-   * uses `SRCDIFF_DEBUG=1` for a `Debug` build in `./srcDiff/build-debug`
+   * uses `SRCDIFF_DEBUG=1` or `--debug` for a `Debug` build
+   * uses `./srcDiff/build` for both Debug and Release because the upstream
+     srcDiff preset fixes the build directory
 
 6. Build srcReader:
 
@@ -202,8 +204,8 @@ For the full dependency layout, clone behavior, and path assumptions, see
    ./build_srcReader.sh
    ```
 
-   This expects `./srcReader` to already be a checkout and links it against the
-   local `./srcML-install`.
+   This clones `./srcReader` if missing and links it against the local
+   `./srcML-install`.
 
 7. Build srcMove:
 
@@ -211,8 +213,8 @@ For the full dependency layout, clone behavior, and path assumptions, see
    ./build_srcMove.sh
    ```
 
-   This expects `./srcMove` and `./srcReader` to already be sibling checkouts.
-   It links against `./srcReader/build` and `./srcML-install`.
+   This clones `./srcMove` if missing. It expects `./srcReader` to already be
+   built, and links against `./srcReader/build` and `./srcML-install`.
 
 ## Notes & Expectations
 
@@ -226,9 +228,8 @@ For the full dependency layout, clone behavior, and path assumptions, see
 * Only tested on Ubuntu 24.04/22.04.
 * Requires `sudo` once (for package install + Kitware repo).
 * The scripts expect a sane workspace layout, but they don’t enforce it — they just use the directory they’re in unless you pass a path explicitly.
-* `build_srcML.sh` and `build_srcDiff.sh` can clone their upstream repos if
-  missing. `build_srcReader.sh` and `build_srcMove.sh` require existing sibling
-  checkouts.
+* `build_srcML.sh`, `build_srcReader.sh`, `build_srcDiff.sh`, and
+  `build_srcMove.sh` can clone their source repos if missing.
 
 ## Final Thoughts
 

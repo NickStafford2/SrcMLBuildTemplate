@@ -50,9 +50,8 @@ When building manually inside Docker, use dependency order:
 ./build_srcMove.sh --yes
 ```
 
-`build_srcML.sh` and `build_srcDiff.sh` can clone their upstream repositories if
-missing. `build_srcReader.sh` and `build_srcMove.sh` require existing sibling
-checkouts.
+`build_srcML.sh`, `build_srcReader.sh`, `build_srcDiff.sh`, and
+`build_srcMove.sh` can clone their source repositories if missing.
 
 ## Editing Rules
 

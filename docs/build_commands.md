@@ -35,11 +35,15 @@ Build `srcReader`:
 ./build_srcReader.sh
 ```
 
+This clones `srcReader/` if it is missing.
+
 Build `srcMove`:
 
 ```bash
 ./build_srcMove.sh
 ```
+
+This clones `srcMove/` if it is missing. Build `srcReader` first.
 
 Run a basic sanity test for `srcml` and `srcdiff`:
 

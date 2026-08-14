@@ -1,6 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# load functions/vars into this script
-source "$(dirname "$0")/other.sh" # or: . "$(dirname "$0")/other.sh"
-echo "TODO"
+cat >&2 <<'EOF'
+build_srcDispatch.sh is not implemented yet.
+
+The supported empty-workspace bootstrap path is:
+
+  ./build_srcML.sh --yes
+  ./build_srcReader.sh --yes
+  ./build_srcDiff.sh --yes
+  ./build_srcMove.sh --yes
+
+srcDispatch is an optional related checkout and is not part of the standard
+srcMove workspace build.
+EOF
+
+exit 2
