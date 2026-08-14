@@ -30,7 +30,7 @@ This repo bundles many scripts:
 * `build_srcMove.sh`
   Builds the sibling `srcMove` checkout against `srcReader` and `srcML-install`.
   
-Includesh configuration for debug adapter protocols. 
+Includes configuration for debug adapter protocols.
 
 These scripts are meant to make things **reproducible**, **simple**, and **non-destructive**.
 Everything installs into your chosen workspace — *no* system-wide pollution.

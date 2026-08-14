@@ -18,6 +18,8 @@ Usage: ./build_srcReader.sh [--yes|-y] [--debug|--release] [workspace]
 Environment:
   SRCREADER_REPO_URL  Repository URL used when ./srcReader is missing.
                       Default: https://github.com/srcML/srcReader.git
+  SRCREADER_BRANCH    Branch to clone or check out before building.
+                      Default: mover
   SRCREADER_DEBUG=1   Build a Debug configuration in ./srcReader/build-debug.
                       Default is Release in ./srcReader/build.
                       CLI flags override this environment variable.
@@ -66,6 +68,7 @@ echo "=== Workspace: $WS ==="
 SRCREADER="$WS/srcReader"
 SRCML_INSTALL="$WS/srcML-install"
 SRCREADER_REPO_URL="${SRCREADER_REPO_URL:-https://github.com/srcML/srcReader.git}"
+SRCREADER_BRANCH="${SRCREADER_BRANCH:-mover}"
 
 if [ -n "$BUILD_MODE_OVERRIDE" ]; then
   BUILD_TYPE="$BUILD_MODE_OVERRIDE"
@@ -99,6 +102,7 @@ Debug)
 esac
 
 echo "srcReader source:       $SRCREADER"
+echo "srcReader branch:       $SRCREADER_BRANCH"
 echo "Build type:             $BUILD_TYPE"
 echo "Build directory:        $BUILDDIR"
 echo ""
@@ -112,13 +116,33 @@ require_boost
 # Clone if needed
 echo "=== [2/5] Checking for srcReader repository ==="
 if [ -d "$SRCREADER/.git" ]; then
-  echo "↻ srcReader repo already exists — skipping clone"
+  echo "↻ srcReader repo already exists"
+  current_branch="$(git -C "$SRCREADER" branch --show-current)"
+  if [ "$current_branch" = "$SRCREADER_BRANCH" ]; then
+    echo "✓ srcReader is already on branch: $SRCREADER_BRANCH"
+  else
+    if [ -n "$(git -C "$SRCREADER" status --porcelain --untracked-files=no)" ]; then
+      echo "✗ Cannot switch srcReader from '${current_branch:-detached HEAD}' to '$SRCREADER_BRANCH': tracked changes are present"
+      echo "  Commit or stash those changes, then rerun this script."
+      exit 1
+    fi
+
+    if git -C "$SRCREADER" show-ref --verify --quiet "refs/heads/$SRCREADER_BRANCH"; then
+      git -C "$SRCREADER" switch "$SRCREADER_BRANCH"
+    else
+      git -C "$SRCREADER" fetch origin "$SRCREADER_BRANCH"
+      git -C "$SRCREADER" switch --track -c "$SRCREADER_BRANCH" "origin/$SRCREADER_BRANCH"
+    fi
+    echo "✓ Checked out srcReader branch: $SRCREADER_BRANCH"
+  fi
 elif [ -f "$SRCREADER/CMakeLists.txt" ]; then
-  echo "↻ srcReader source directory already exists without git metadata — skipping clone"
+  echo "✗ srcReader source exists without git metadata; cannot select branch '$SRCREADER_BRANCH'"
+  echo "  Move the directory aside or set up the expected git checkout, then rerun this script."
+  exit 1
 else
-  echo "Cloning srcReader into: $SRCREADER"
-  git clone "$SRCREADER_REPO_URL" "$SRCREADER"
-  echo "✓ srcReader repository cloned"
+  echo "Cloning srcReader branch '$SRCREADER_BRANCH' into: $SRCREADER"
+  git clone --branch "$SRCREADER_BRANCH" "$SRCREADER_REPO_URL" "$SRCREADER"
+  echo "✓ srcReader repository cloned on branch: $SRCREADER_BRANCH"
 fi
 echo ""
 
