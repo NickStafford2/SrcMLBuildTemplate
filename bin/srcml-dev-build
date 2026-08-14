@@ -3,10 +3,4 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 
-exec "$SCRIPT_DIR/srcml-dev-shell" bash -lc '
-  set -euo pipefail
-  ./build_srcML.sh --yes
-  ./build_srcReader.sh --yes
-  ./build_srcDiff.sh --yes
-  ./build_srcMove.sh --yes
-'
+exec "$SCRIPT_DIR/srcml-dev-shell" ./bin/srcml-build-srcmove

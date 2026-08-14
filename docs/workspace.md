@@ -178,6 +178,7 @@ The `Makefile` provides easier-to-remember aliases:
 
 ```bash
 make shell           # enter Docker
+make srcmove         # build srcMove and its dependency chain
 make build           # alias for make build-release
 make build-dev       # debuggable development build
 make build-release   # optimized local build
@@ -185,6 +186,10 @@ make build-production # release/test/package path where supported
 make test            # run srcMove tests in Docker
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
+
+`make srcmove` is the focused installation path for srcMove. It builds srcML,
+srcReader, srcDiff, and srcMove in dependency order inside Docker without
+requiring those tools to be installed directly on macOS.
 
 Use `make docker-rebuild` after editing `Dockerfile` or changing system-level
 dependencies such as compilers, libraries, or Python packages.

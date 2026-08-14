@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+
+cd "$WORKSPACE"
+
+./build_srcML.sh --yes
+./build_srcReader.sh --yes
+./build_srcDiff.sh --yes
+./build_srcMove.sh --yes
