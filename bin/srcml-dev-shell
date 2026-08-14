@@ -29,7 +29,14 @@ if [ "$REBUILD" = "1" ] || ! docker image inspect "$IMAGE_NAME" >/dev/null 2>&1;
     "$WORKSPACE"
 fi
 
-exec docker run --rm -it \
+docker_run_args=(--rm)
+if [ -t 0 ] && [ -t 1 ]; then
+  docker_run_args+=(-it)
+elif [ ! -t 0 ]; then
+  docker_run_args+=(-i)
+fi
+
+exec docker run "${docker_run_args[@]}" \
   -v "$WORKSPACE:/workspace" \
   -w /workspace \
   "$IMAGE_NAME" \

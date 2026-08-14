@@ -101,7 +101,7 @@ The combined Docker helper runs that sequence:
 ```
 
 `srcMove` tests are Python-driven. The Docker image installs `python3` so the
-normal `srcMove/build_and_test` and `python3 test/run_all.py` entry points work
+normal `srcMove/build_and_test` and `python3 tests/run.py` entry points work
 inside the container.
 
 ## Important Paths
