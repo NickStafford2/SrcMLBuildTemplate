@@ -71,7 +71,9 @@ if the directory does not already exist, then updates srcDiff submodules.
 
 `build_srcReader.sh` clones `srcReader/` from
 `https://github.com/srcML/srcReader.git` if the directory does not already
-exist. Override with `SRCREADER_REPO_URL` when needed.
+exist. Until the pending upstream changes are merged, it checks out the
+`mover` branch. Override the source or branch with `SRCREADER_REPO_URL` or
+`SRCREADER_BRANCH` when needed.
 
 `build_srcMove.sh` clones `srcMove/` from
 `https://github.com/NickStafford2/srcMove.git` if the directory does not already
