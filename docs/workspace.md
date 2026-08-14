@@ -22,6 +22,7 @@ srcMLBuildTemplate/
   build_srcDiff.sh
   build_srcReader.sh
   build_srcMove.sh
+  build_srcVisual.sh
 
   srcML/             upstream srcML checkout
   srcML-build/       generated srcML build tree
@@ -36,7 +37,7 @@ srcMLBuildTemplate/
   srcMove/           srcMove checkout
   srcDispatch/       optional related checkout
   srcSAX/            optional related checkout
-  srcVisual/         optional related checkout
+  srcVisual/         visualization application for srcDiff/srcMove results
 ```
 
 ## Repository Roles
@@ -57,6 +58,22 @@ XML streams.
 
 `srcMove` post-processes srcDiff XML and annotates matched
 `diff:delete`/`diff:insert` regions with move metadata.
+
+`srcVisual` is a downstream inspection application for srcDiff and srcMove. Its
+Python backend prepares uploaded srcDiff/srcMove XML and its React frontend
+shows synchronized XML, tree, source-code, diff, and move views. It exists
+because move results, especially moves across files, are difficult to validate
+from XML alone.
+
+The main data flow is:
+
+```text
+source code -> srcML XML -> srcDiff XML -> srcMove annotations -> srcVisual
+```
+
+`srcMove` is the primary research project and master's thesis deliverable.
+`srcVisual` supports that research by making its results understandable and
+inspectable; it may also evolve into a separately hosted application.
 
 ## Clone Behavior
 
@@ -79,6 +96,12 @@ exist. Until the pending upstream changes are merged, it checks out the
 `https://github.com/NickStafford2/srcMove.git` if the directory does not already
 exist. Override with `SRCMOVE_REPO_URL` when needed.
 
+`build_srcVisual.sh` clones `srcVisual/` from
+`https://github.com/NickStafford2/srcVisual.git` if the directory does not
+already exist. Override with `SRCVISUAL_REPO_URL` when needed. It installs the
+Python backend into `srcVisual/.venv` and builds the React frontend into
+`srcVisual/frontend/dist`.
+
 `build_srcDispatch.sh` is intentionally not part of the standard bootstrap path
 yet. It exits with a clear message instead of sourcing missing placeholder
 files.
@@ -100,9 +123,9 @@ The combined Docker helper runs that sequence:
 ./bin/srcml-dev-build
 ```
 
-`srcMove` tests are Python-driven. The Docker image installs `python3` so the
-normal `srcMove/build_and_test` and `python3 tests/run.py` entry points work
-inside the container.
+`srcMove` owns its build and test interface as an independent repository. The
+workspace-level `make test` enters Docker and delegates to `make test` inside
+srcMove. Its Makefile builds with CMake and invokes the Python test runner.
 
 ## Important Paths
 
@@ -134,6 +157,16 @@ For debug builds, `SRCREADER_DEBUG=1` makes `build_srcMove.sh` link against
 On macOS, keep this directory on the normal macOS filesystem. Edit with Neovim,
 Codex, or any other Mac tool. Use Docker Desktop only as the Ubuntu build and
 runtime environment.
+
+The root Docker environment exists specifically to isolate the complete srcML
+toolchain from macOS while keeping every checkout and generated artifact
+accessible to host-side editors and Codex. Builds, tests, and Linux-specific
+diagnostics should run inside that environment rather than using host-native
+CMake, compilers, Python environments, or Node installations.
+
+Codex normally cannot attach to an interactive shell that a developer already
+opened. For repeatable testing and diagnosis, it should invoke non-interactive
+commands through `bin/srcml-dev-shell` or use the top-level `make` targets.
 
 Enter the Ubuntu workspace shell:
 

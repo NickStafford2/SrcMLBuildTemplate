@@ -61,6 +61,8 @@ When building manually inside Docker, use dependency order:
   explicitly asks.
 - Keep durable workspace facts in [docs/workspace.md](docs/workspace.md) and
   link to that doc instead of duplicating layout details.
+- Follow [the documentation policy](docs/documentation_policy.md) when creating
+  or reorganizing documentation across the workspace repositories.
 
 ## srcMove
 
