@@ -35,4 +35,4 @@ build-production:
 	./bin/srcml-dev-build-production
 
 test:
-	./bin/srcml-dev-shell bash -lc 'cd srcMove && ./build_and_test'
+	./bin/srcml-dev-shell bash -lc 'cd srcMove && make test'
