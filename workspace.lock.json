@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "repositories": {
+    "srcML": {
+      "url": "https://github.com/srcML/srcML",
+      "commit": "51691c8ff5205543d092d0fba3e4f2f0164b9131"
+    },
+    "srcDiff": {
+      "url": "https://github.com/srcML/srcDiff",
+      "commit": "3d3b003f2bcc07327e6e0b189f4156f019142ce4"
+    },
+    "srcReader": {
+      "url": "https://github.com/srcML/srcReader",
+      "commit": "b4b2a88fca88e5dae40fd181f2666961e3ce01dc"
+    },
+    "srcMove": {
+      "url": "https://github.com/NickStafford2/srcMove",
+      "commit": "e3def05e83bff4f4d848b35e72e8e00d8b62804a"
+    }
+  }
+}

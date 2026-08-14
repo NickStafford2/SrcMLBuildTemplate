@@ -1,6 +1,6 @@
 IMAGE_NAME ?= srcml-dev:ubuntu24.04
 
-.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test
+.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test lock-status lock-verify lock-update
 
 help:
 	@printf '%s\n' 'Available targets:'
@@ -13,6 +13,9 @@ help:
 	@printf '  %-16s %s\n' 'make build-release' 'Optimized local build'
 	@printf '  %-16s %s\n' 'make build-production' 'Release/test/package build where supported'
 	@printf '  %-16s %s\n' 'make test' 'Run srcMove tests in Docker'
+	@printf '  %-16s %s\n' 'make lock-status' 'Compare source checkouts with workspace.lock.json'
+	@printf '  %-16s %s\n' 'make lock-verify' 'Fail unless source checkouts match workspace.lock.json'
+	@printf '  %-16s %s\n' 'make lock-update' 'Capture the current clean source revisions'
 
 docker-build:
 	./bin/srcml-dev-shell true
@@ -40,3 +43,12 @@ build-production:
 
 test:
 	./bin/srcml-dev-shell bash -lc 'cd srcMove && make test'
+
+lock-status:
+	./bin/workspace-lock status
+
+lock-verify:
+	./bin/workspace-lock verify
+
+lock-update:
+	./bin/workspace-lock capture

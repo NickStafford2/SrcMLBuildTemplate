@@ -71,6 +71,30 @@ The main data flow is:
 source code -> srcML XML -> srcDiff XML -> srcMove annotations -> srcVisual
 ```
 
+## Locked Source Revisions
+
+The tracked `workspace.lock.json` records the exact srcML, srcDiff, srcReader,
+and srcMove commits known to work together. It coordinates the independent
+repositories without making them part of the top-level Git repository.
+
+Use the top-level Make targets to inspect or update it:
+
+```bash
+make lock-status  # report differences without failing
+make lock-verify  # fail unless every checkout matches
+make lock-update  # capture the current revisions; refuses tracked changes
+```
+
+Commit hashes are authoritative. Branch names and tool `--version` output are
+not sufficient because branches move and displayed versions may lag development
+commits. Verification compares the full commit, the `origin` repository, and
+tracked working-tree changes. Equivalent GitHub SSH and HTTPS origins compare as
+the same repository.
+
+The lockfile describes source checkouts, not generated binaries. Benchmark run
+manifests should also record the lockfile checksum, binary checksums, and build
+configuration so stale build artifacts cannot be mistaken for locked builds.
+
 `srcMove` is the primary research project and master's thesis deliverable.
 `srcVisual` supports that research by making its results understandable and
 inspectable; it may also evolve into a separately hosted application.

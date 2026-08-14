@@ -1,0 +1,223 @@
+#!/usr/bin/env python3
+"""Capture and verify the source revisions in this workspace."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import string
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+from typing import Any
+
+
+WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
+LOCK_PATH = WORKSPACE_ROOT / "workspace.lock.json"
+REPOSITORIES = ("srcML", "srcDiff", "srcReader", "srcMove")
+SCHEMA_VERSION = 1
+
+
+class LockError(RuntimeError):
+    pass
+
+
+def git(repo: Path, *args: str) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), *args],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        detail = (proc.stderr or proc.stdout).strip()
+        raise LockError(f"git {' '.join(args)} failed for {repo}: {detail}")
+    return proc.stdout.strip()
+
+
+def canonical_url(url: str) -> str:
+    value = url.strip().rstrip("/")
+    if value.startswith("git@github.com:"):
+        value = "https://github.com/" + value.removeprefix("git@github.com:")
+    elif value.startswith("ssh://git@github.com/"):
+        value = "https://github.com/" + value.removeprefix(
+            "ssh://git@github.com/"
+        )
+    if value.endswith(".git"):
+        value = value[:-4]
+    return value
+
+
+def repository_state(name: str) -> dict[str, Any]:
+    repo = WORKSPACE_ROOT / name
+    if not (repo / ".git").exists():
+        raise LockError(f"repository is missing or has no Git metadata: {repo}")
+
+    return {
+        "url": canonical_url(git(repo, "remote", "get-url", "origin")),
+        "commit": git(repo, "rev-parse", "HEAD"),
+        "dirty": bool(git(repo, "status", "--porcelain", "--untracked-files=no")),
+    }
+
+
+def load_lock() -> dict[str, Any]:
+    try:
+        data = json.loads(LOCK_PATH.read_text(encoding="utf-8"))
+    except FileNotFoundError as error:
+        raise LockError(f"lockfile not found: {LOCK_PATH}") from error
+    except json.JSONDecodeError as error:
+        raise LockError(f"invalid JSON in {LOCK_PATH}: {error}") from error
+
+    if not isinstance(data, dict) or data.get("schema_version") != SCHEMA_VERSION:
+        raise LockError(
+            f"unsupported or missing schema_version in {LOCK_PATH}; "
+            f"expected {SCHEMA_VERSION}"
+        )
+
+    repositories = data.get("repositories")
+    if not isinstance(repositories, dict):
+        raise LockError(f"missing repositories object in {LOCK_PATH}")
+
+    missing = [name for name in REPOSITORIES if name not in repositories]
+    extra = [name for name in repositories if name not in REPOSITORIES]
+    if missing or extra:
+        parts = []
+        if missing:
+            parts.append("missing: " + ", ".join(missing))
+        if extra:
+            parts.append("unexpected: " + ", ".join(extra))
+        raise LockError("invalid repository set in lockfile (" + "; ".join(parts) + ")")
+
+    for name in REPOSITORIES:
+        entry = repositories[name]
+        if not isinstance(entry, dict):
+            raise LockError(f"invalid lock entry for {name}")
+        url = entry.get("url")
+        commit = entry.get("commit")
+        if not isinstance(url, str) or not url:
+            raise LockError(f"missing URL for {name}")
+        if (
+            not isinstance(commit, str)
+            or len(commit) != 40
+            or any(character not in string.hexdigits for character in commit)
+        ):
+            raise LockError(f"invalid full commit hash for {name}")
+
+    return data
+
+
+def inspect_lock() -> tuple[list[str], bool]:
+    locked = load_lock()["repositories"]
+    lines: list[str] = []
+    matches = True
+
+    for name in REPOSITORIES:
+        try:
+            actual = repository_state(name)
+        except LockError as error:
+            lines.append(f"FAIL  {name:<10} {error}")
+            matches = False
+            continue
+
+        expected = locked[name]
+        problems: list[str] = []
+        if canonical_url(expected["url"]) != actual["url"]:
+            problems.append(
+                f"origin {actual['url']} (locked {canonical_url(expected['url'])})"
+            )
+        if expected["commit"] != actual["commit"]:
+            problems.append(
+                f"commit {actual['commit'][:12]} (locked {expected['commit'][:12]})"
+            )
+        if actual["dirty"]:
+            problems.append("tracked changes present")
+
+        if problems:
+            lines.append(f"FAIL  {name:<10} " + "; ".join(problems))
+            matches = False
+        else:
+            lines.append(f"OK    {name:<10} {actual['commit'][:12]}")
+
+    return lines, matches
+
+
+def write_lock() -> None:
+    repositories: dict[str, dict[str, str]] = {}
+    for name in REPOSITORIES:
+        state = repository_state(name)
+        if state["dirty"]:
+            raise LockError(
+                f"refusing to update lockfile: {name} has tracked changes"
+            )
+        repositories[name] = {
+            "url": state["url"],
+            "commit": state["commit"],
+        }
+
+    data = {
+        "schema_version": SCHEMA_VERSION,
+        "repositories": repositories,
+    }
+    rendered = json.dumps(data, indent=2) + "\n"
+
+    with tempfile.NamedTemporaryFile(
+        "w",
+        encoding="utf-8",
+        dir=WORKSPACE_ROOT,
+        prefix=".workspace.lock.",
+        delete=False,
+    ) as temp:
+        temp.write(rendered)
+        temp_path = Path(temp.name)
+
+    temp_path.chmod(0o644)
+
+    try:
+        os.replace(temp_path, LOCK_PATH)
+    except BaseException:
+        temp_path.unlink(missing_ok=True)
+        raise
+
+    print(f"updated {LOCK_PATH}")
+    for name, entry in repositories.items():
+        print(f"  {name:<10} {entry['commit'][:12]}  {entry['url']}")
+
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(
+        description="Capture or verify exact srcML workspace source revisions."
+    )
+    parser.add_argument(
+        "command",
+        choices=("status", "verify", "capture"),
+        help=(
+            "status reports differences, verify reports and fails on differences, "
+            "and capture replaces the lock with the current clean revisions"
+        ),
+    )
+    return parser.parse_args()
+
+
+def main() -> int:
+    args = parse_args()
+    if args.command == "capture":
+        write_lock()
+        return 0
+
+    lines, matches = inspect_lock()
+    for line in lines:
+        print(line)
+    print("workspace matches lockfile" if matches else "workspace differs from lockfile")
+    if args.command == "verify" and not matches:
+        return 1
+    return 0
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except LockError as error:
+        print(f"error: {error}", file=sys.stderr)
+        raise SystemExit(2)
