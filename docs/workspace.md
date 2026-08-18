@@ -91,9 +91,13 @@ commits. Verification compares the full commit, the `origin` repository, and
 tracked working-tree changes. Equivalent GitHub SSH and HTTPS origins compare as
 the same repository.
 
-The lockfile describes source checkouts, not generated binaries. Benchmark run
-manifests should also record the lockfile checksum, binary checksums, and build
-configuration so stale build artifacts cannot be mistaken for locked builds.
+The lockfile describes source checkouts, not generated binaries. A run-time
+snapshot of the lockfile, checkout, and binary checksum still cannot prove that
+the binary was built from those sources. Benchmark runs should use a receipt
+emitted by the build when a verified source-to-binary binding is required, and
+otherwise label that binding as unverified. Run manifests should preserve the
+lockfile checksum, observed binary checksums, and provenance status so stale
+build artifacts cannot be mistaken for locked builds.
 
 `srcMove` is the primary research project and master's thesis deliverable.
 `srcVisual` supports that research by making its results understandable and
@@ -208,8 +212,12 @@ make build-dev       # debuggable development build
 make build-release   # optimized local build
 make build-production # release/test/package path where supported
 make test            # run srcMove tests in Docker
+make benchmark-repo CASE=notepadpp # run and save a repository benchmark
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
+
+Named benchmark series and the saved artifact layout are documented in the
+[srcMove repository benchmark guide](../srcMove/benchmarks/repositories/README.md).
 
 `make srcmove` is the focused installation path for srcMove. It builds srcML,
 srcReader, srcDiff, and srcMove in dependency order inside Docker without
@@ -217,6 +225,24 @@ requiring those tools to be installed directly on macOS.
 
 Use `make docker-rebuild` after editing `Dockerfile` or changing system-level
 dependencies such as compilers, libraries, or Python packages.
+
+## srcDiff Runtime Linking
+
+Use `srcDiff/build/bin/srcdiff` for local Docker development and benchmarks. It
+retains a RUNPATH to `srcML-install/lib` and is the srcDiff executable placed on
+the container `PATH`.
+
+The optional `srcDiff-install/bin/srcdiff` loses that RUNPATH during
+`cmake --install`. The development container therefore configures the local
+srcML library prefix explicitly:
+
+```bash
+LD_LIBRARY_PATH=/workspace/srcML-install/lib
+```
+
+This makes locally installed workspace tools runnable without embedding an
+absolute `/workspace` RUNPATH in production packages. It is workspace runtime
+configuration, not a workaround for an srcML library failure.
 
 ## Build Modes
 

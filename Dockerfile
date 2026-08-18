@@ -69,6 +69,7 @@ RUN if getent group "${USER_GID}" >/dev/null; then \
 ENV CC=clang
 ENV CXX=clang++
 ENV PATH="/workspace/srcML-install/bin:/workspace/srcDiff/build/bin:/workspace/srcReader/build/bin:/workspace/srcMove/build:${PATH}"
+ENV LD_LIBRARY_PATH="/workspace/srcML-install/lib"
 
 WORKDIR /workspace
 USER ${USERNAME}
