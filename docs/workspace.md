@@ -212,12 +212,13 @@ make build-dev       # debuggable development build
 make build-release   # optimized local build
 make build-production # release/test/package path where supported
 make test            # run srcMove tests in Docker
-make benchmark-repo CASE=notepadpp # run and save a repository benchmark
+make history-scaling \
+  CASE=sqlite START=<commit> COUNT=300 JOBS=1,2,4 # benchmark history scaling
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
 
-Named benchmark series and the saved artifact layout are documented in the
-[srcMove repository benchmark guide](../srcMove/benchmarks/repositories/README.md).
+The controlled study and its saved artifact layout are documented in the
+[srcMove History scaling guide](../srcMove/srcmove_history/benchmarks/README.md).
 
 `make srcmove` is the focused installation path for srcMove. It builds srcML,
 srcReader, srcDiff, and srcMove in dependency order inside Docker without

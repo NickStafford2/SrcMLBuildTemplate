@@ -1,10 +1,10 @@
 IMAGE_NAME ?= srcml-dev:ubuntu24.04
-CLONE_TYPE ?= type1
-LIMIT ?= 100
-SELECTION_ROLE ?= tuning
-CASES_DIR ?= benchmarks/bigclonebench/cases
+PROFILE ?= small
+ROLE ?= tuning
+SEED ?= 0
+VERIFY_SOURCE ?= 0
 
-.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test benchmark-repo bigclonebench-preflight bigclonebench-cases bigclonebench lock-status lock-verify lock-update
+.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test history-scaling bigmovebench-preflight bigmovebench-suite lock-status lock-verify lock-update
 
 help:
 	@printf '%s\n' 'Available targets:'
@@ -17,10 +17,9 @@ help:
 	@printf '  %-28s %s\n' 'make build-release' 'Optimized local build'
 	@printf '  %-28s %s\n' 'make build-production' 'Release/test/package build where supported'
 	@printf '  %-28s %s\n' 'make test' 'Run srcMove tests in Docker'
-	@printf '  %-28s %s\n' 'make benchmark-repo' 'Run and save CASE repository benchmark'
-	@printf '  %-28s %s\n' 'make bigclonebench-preflight' 'Check the local BigCloneBench installation'
-	@printf '  %-28s %s\n' 'make bigclonebench-cases' 'Generate a configurable BigCloneBench case slice'
-	@printf '  %-28s %s\n' 'make bigclonebench' 'Generate cases and run the staged BigCloneBench pipeline'
+	@printf '  %-28s %s\n' 'make history-scaling' 'Measure srcMove History throughput across JOBS'
+	@printf '  %-28s %s\n' 'make bigmovebench-preflight' 'Check the local BigCloneBench installation'
+	@printf '  %-28s %s\n' 'make bigmovebench-suite' 'Run BigMoveBench PROFILE=small|medium (full is slow)'
 	@printf '  %-28s %s\n' 'make lock-status' 'Compare source checkouts with workspace.lock.json'
 	@printf '  %-28s %s\n' 'make lock-verify' 'Fail unless source checkouts match workspace.lock.json'
 	@printf '  %-28s %s\n' 'make lock-update' 'Capture the current clean source revisions'
@@ -52,27 +51,21 @@ build-production:
 test:
 	./bin/srcml-dev-shell bash -lc 'cd srcMove && make test'
 
-benchmark-repo:
-	@test -n "$(CASE)" || { echo 'error: CASE is required'; exit 2; }
-	./bin/srcml-dev-shell make -C srcMove benchmark-repo \
-		CASE="$(CASE)" SERIES="$(SERIES)" UPDATE="$(UPDATE)" OFFLINE="$(OFFLINE)"
+history-scaling:
+	@./bin/srcml-dev-shell make --no-print-directory -C srcMove history-scaling \
+		CASE="$(CASE)" START="$(START)" COUNT="$(COUNT)" JOBS="$(JOBS)" \
+		REPETITIONS="$(REPETITIONS)" WARMUPS="$(WARMUPS)" SEED="$(SEED)" \
+		LABEL="$(LABEL)" ENVIRONMENT_LABEL="$(ENVIRONMENT_LABEL)" \
+		SCRATCH_ROOT="$(SCRATCH_ROOT)" DIRECTORY="$(DIRECTORY)" \
+		UPDATE="$(UPDATE)" OFFLINE="$(OFFLINE)"
 
-bigclonebench-preflight:
-	./bin/srcml-dev-shell make -C srcMove bigclonebench-preflight
+bigmovebench-preflight:
+	@./bin/srcml-dev-shell make --no-print-directory -C srcMove bigmovebench-preflight
 
-bigclonebench-cases:
-	./bin/srcml-dev-shell make -C srcMove bigclonebench-cases \
-		CLONE_TYPE="$(CLONE_TYPE)" LIMIT="$(LIMIT)" \
-		SELECTION_ROLE="$(SELECTION_ROLE)" CASES_DIR="$(CASES_DIR)" \
-		CANDIDATE_LIMIT="$(CANDIDATE_LIMIT)" DEDUPE="$(DEDUPE)" \
-		TEXT_CHANGE="$(TEXT_CHANGE)"
-
-bigclonebench:
-	./bin/srcml-dev-shell make -C srcMove bigclonebench \
-		CLONE_TYPE="$(CLONE_TYPE)" LIMIT="$(LIMIT)" \
-		SELECTION_ROLE="$(SELECTION_ROLE)" CASES_DIR="$(CASES_DIR)" \
-		CANDIDATE_LIMIT="$(CANDIDATE_LIMIT)" DEDUPE="$(DEDUPE)" \
-		TEXT_CHANGE="$(TEXT_CHANGE)"
+bigmovebench-suite:
+	@./bin/srcml-dev-shell make --no-print-directory -C srcMove bigmovebench-suite \
+		PROFILE="$(PROFILE)" ROLE="$(ROLE)" PAIR_SET="$(PAIR_SET)" \
+		VERIFY_SOURCE="$(VERIFY_SOURCE)"
 
 lock-status:
 	./bin/workspace-lock status

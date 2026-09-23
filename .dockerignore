@@ -22,4 +22,15 @@ srcMove/build
 srcMove/build-debug
 srcDispatch/build
 sample_debug_tools
+repository_analysis
+srcMove/benchmark-results
+srcMove/bigMoveBench/cache
+srcMove/bigMoveBench/data
+srcMove/old
+srcMove/reference-repositories
 out.txt
+
+# srcReader's canonical build script verifies its expected branch. Preserve only
+# that checkout's Git metadata in the native-tool builder.
+!srcReader/.git
+!srcReader/.git/**
