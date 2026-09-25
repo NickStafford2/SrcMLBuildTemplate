@@ -1,0 +1,171 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+COMPOSE_FILE="$WORKSPACE/srcVisual/compose.yaml"
+HISTORY_REPOSITORY="$WORKSPACE/srcMove/reference-repositories/notepadpp"
+ANALYSIS_ROOT="$HISTORY_REPOSITORY/.srcmove"
+CONTAINER_SRCDIFF="/opt/srcDiff/bin/srcdiff"
+CONTAINER_SRCMOVE="/opt/srcMove/bin/srcMove"
+
+PAIRS=400
+JOBS=8
+
+usage() {
+  cat <<'EOF'
+Usage: bin/srcvisual-history-refresh [--pairs N] [--jobs N]
+
+Rebuild srcVisual with the current srcMove checkout, archive the existing
+Notepad++ history analysis, start a fresh analysis, and cover the newest N
+adjacent commit pairs.
+
+Options:
+  --pairs N  Number of adjacent commit pairs to cover (default: 400)
+  --jobs N   Number of history-analysis workers (default: 8)
+  -h, --help Show this help
+EOF
+}
+
+positive_integer() {
+  [[ "$1" =~ ^[1-9][0-9]*$ ]]
+}
+
+while (( $# > 0 )); do
+  case "$1" in
+    --pairs)
+      if (( $# < 2 )) || ! positive_integer "$2"; then
+        echo "error: --pairs requires a positive integer" >&2
+        exit 2
+      fi
+      PAIRS="$2"
+      shift 2
+      ;;
+    --jobs)
+      if (( $# < 2 )) || ! positive_integer "$2"; then
+        echo "error: --jobs requires a positive integer" >&2
+        exit 2
+      fi
+      JOBS="$2"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "error: unknown argument: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+if ! command -v docker >/dev/null 2>&1; then
+  echo "error: docker is not installed or not on PATH" >&2
+  exit 1
+fi
+if ! docker compose version >/dev/null 2>&1; then
+  echo "error: Docker Compose is unavailable" >&2
+  exit 1
+fi
+if [ ! -f "$COMPOSE_FILE" ]; then
+  echo "error: srcVisual Compose file not found: $COMPOSE_FILE" >&2
+  exit 1
+fi
+if [ ! -d "$HISTORY_REPOSITORY/.git" ]; then
+  echo "error: Notepad++ reference repository not found: $HISTORY_REPOSITORY" >&2
+  exit 1
+fi
+
+timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+archive_root="$HISTORY_REPOSITORY/.srcmove-archive-$timestamp"
+failed_root="$HISTORY_REPOSITORY/.srcmove-failed-$timestamp"
+had_analysis=0
+initializing=0
+
+if [ -e "$ANALYSIS_ROOT" ] && [ ! -d "$ANALYSIS_ROOT" ]; then
+  echo "error: analysis path is not a directory: $ANALYSIS_ROOT" >&2
+  exit 1
+fi
+if [ -e "$archive_root" ]; then
+  echo "error: archive path already exists: $archive_root" >&2
+  exit 1
+fi
+
+cd "$WORKSPACE"
+
+echo "Building srcVisual with the current srcMove checkout."
+docker compose -f "$COMPOSE_FILE" build srcvisual
+
+echo "Verifying the packaged native tools."
+docker compose -f "$COMPOSE_FILE" run --rm --no-deps srcvisual \
+  sh -c "test -x '$CONTAINER_SRCDIFF' && test -x '$CONTAINER_SRCMOVE'"
+
+echo "Stopping srcVisual services."
+docker compose -f "$COMPOSE_FILE" down
+
+restore_analysis_on_initialization_failure() {
+  status=$?
+  if (( status != 0 && initializing == 1 )); then
+    echo "Initialization failed; restoring the previous analysis." >&2
+    if [ -e "$ANALYSIS_ROOT" ]; then
+      mv "$ANALYSIS_ROOT" "$failed_root"
+      echo "Incomplete replacement preserved at: $failed_root" >&2
+    fi
+    if (( had_analysis == 1 )); then
+      mv "$archive_root" "$ANALYSIS_ROOT"
+    fi
+    docker compose -f "$COMPOSE_FILE" up -d --force-recreate || true
+  fi
+  exit "$status"
+}
+trap restore_analysis_on_initialization_failure EXIT
+
+initializing=1
+if [ -d "$ANALYSIS_ROOT" ]; then
+  echo "Archiving the existing analysis at: $archive_root"
+  mv "$ANALYSIS_ROOT" "$archive_root"
+  had_analysis=1
+fi
+
+mkdir "$ANALYSIS_ROOT"
+
+if (( had_analysis == 1 )) && [ -f "$archive_root/config.toml" ]; then
+  cp "$archive_root/config.toml" "$ANALYSIS_ROOT/config.toml"
+  echo "Retained the previous history-analysis configuration."
+fi
+
+docker compose -f "$COMPOSE_FILE" run --rm srcvisual \
+  srcmove-history -C /history/repository init
+
+initializing=0
+trap - EXIT
+
+echo "Starting srcVisual at http://127.0.0.1:5000."
+docker compose -f "$COMPOSE_FILE" up -d --force-recreate
+
+echo "Analyzing the newest $PAIRS adjacent commit pairs with $JOBS workers."
+echo "The new analysis is durable and can be resumed if this command is interrupted."
+if ! docker compose -f "$COMPOSE_FILE" run --rm srcvisual \
+  srcmove-history -C /history/repository run \
+  --pairs "$PAIRS" \
+  --jobs "$JOBS" \
+  --srcdiff "$CONTAINER_SRCDIFF" \
+  --srcmove "$CONTAINER_SRCMOVE"; then
+  echo "History analysis stopped before successful completion." >&2
+  echo "Resume it without rebuilding or archiving by running:" >&2
+  if [ -f "$ANALYSIS_ROOT/analysis.sqlite3" ]; then
+    echo "  docker compose -f srcVisual/compose.yaml run --rm srcvisual srcmove-history -C /history/repository run --pairs $PAIRS --jobs $JOBS" >&2
+  else
+    echo "  docker compose -f srcVisual/compose.yaml run --rm srcvisual srcmove-history -C /history/repository run --pairs $PAIRS --jobs $JOBS --srcdiff $CONTAINER_SRCDIFF --srcmove $CONTAINER_SRCMOVE" >&2
+  fi
+  exit 1
+fi
+
+echo "History refresh complete."
+docker compose -f "$COMPOSE_FILE" run --rm srcvisual \
+  srcmove-history -C /history/repository status
+if (( had_analysis == 1 )); then
+  echo "Previous analysis: $archive_root"
+fi

@@ -214,8 +214,16 @@ make build-production # release/test/package path where supported
 make test            # run srcMove tests in Docker
 make history-scaling \
   CASE=sqlite START=<commit> COUNT=300 JOBS=1,2,4 # benchmark history scaling
+make srcvisual-history-refresh # rebuild srcVisual and analyze 400 Notepad++ pairs
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
+
+After changing the srcMove algorithm, `make srcvisual-history-refresh`
+rebuilds srcVisual's packaged image, archives the current Notepad++ `.srcmove`
+analysis, retains its configuration, starts a fresh analysis for the newest 400
+adjacent commit pairs, and leaves srcVisual running at
+`http://127.0.0.1:5000`. Override the defaults with `PAIRS=...` and `JOBS=...`.
+Archived analyses remain beside `.srcmove`; the command never deletes them.
 
 The controlled study and its saved artifact layout are documented in the
 [srcMove History scaling guide](../srcMove/srcmove_history/benchmarks/README.md).

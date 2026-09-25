@@ -4,7 +4,7 @@ ROLE ?= tuning
 SEED ?= 0
 VERIFY_SOURCE ?= 0
 
-.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test history-scaling bigmovebench-preflight bigmovebench-suite lock-status lock-verify lock-update
+.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test history-scaling srcvisual-history-refresh bigmovebench-preflight bigmovebench-suite lock-status lock-verify lock-update
 
 help:
 	@printf '%s\n' 'Available targets:'
@@ -18,6 +18,7 @@ help:
 	@printf '  %-28s %s\n' 'make build-production' 'Release/test/package build where supported'
 	@printf '  %-28s %s\n' 'make test' 'Run srcMove tests in Docker'
 	@printf '  %-28s %s\n' 'make history-scaling' 'Measure srcMove History throughput across JOBS'
+	@printf '  %-28s %s\n' 'make srcvisual-history-refresh' 'Rebuild srcVisual and analyze 400 Notepad++ pairs'
 	@printf '  %-28s %s\n' 'make bigmovebench-preflight' 'Check the local BigCloneBench installation'
 	@printf '  %-28s %s\n' 'make bigmovebench-suite' 'Run BigMoveBench PROFILE=small|medium (full is slow)'
 	@printf '  %-28s %s\n' 'make lock-status' 'Compare source checkouts with workspace.lock.json'
@@ -58,6 +59,11 @@ history-scaling:
 		LABEL="$(LABEL)" ENVIRONMENT_LABEL="$(ENVIRONMENT_LABEL)" \
 		SCRATCH_ROOT="$(SCRATCH_ROOT)" DIRECTORY="$(DIRECTORY)" \
 		UPDATE="$(UPDATE)" OFFLINE="$(OFFLINE)"
+
+srcvisual-history-refresh: PAIRS ?= 400
+srcvisual-history-refresh: JOBS ?= 8
+srcvisual-history-refresh:
+	./bin/srcvisual-history-refresh --pairs "$(PAIRS)" --jobs "$(JOBS)"
 
 bigmovebench-preflight:
 	@./bin/srcml-dev-shell make --no-print-directory -C srcMove bigmovebench-preflight
