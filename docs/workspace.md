@@ -214,16 +214,34 @@ make build-production # release/test/package path where supported
 make test            # run srcMove tests in Docker
 make history-scaling \
   CASE=sqlite START=<commit> COUNT=300 JOBS=1,2,4 # benchmark history scaling
-make srcvisual-history-refresh # rebuild srcVisual and analyze 400 Notepad++ pairs
+make srcvisual-eval-check # verify the build/mount path without an analysis
+make srcvisual-eval-fast  # develop against 10 Notepad++ pairs by default
+make srcvisual-eval-400   # run the fixed research evaluation
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
 
-After changing the srcMove algorithm, `make srcvisual-history-refresh`
-rebuilds srcVisual's packaged image, archives the current Notepad++ `.srcmove`
-analysis, retains its configuration, starts a fresh analysis for the newest 400
-adjacent commit pairs, and leaves srcVisual running at
-`http://127.0.0.1:5000`. Override the defaults with `PAIRS=...` and `JOBS=...`.
-Archived analyses remain beside `.srcmove`; the command never deletes them.
+After changing the srcMove algorithm, `make srcvisual-eval-fast` incrementally
+rebuilds the Linux `srcMove/build/srcMove` target in the workspace development
+container. srcVisual bind-mounts that exact executable into both Compose
+services and Compose one-off containers, avoiding a rebuild of the complete
+application image. The command prints the srcMove checkout state, build receipt,
+and mounted srcMove/srcDiff checksums before doing work. Override the small
+sample with `SRCVISUAL_FAST_PAIRS=...` and worker count with
+`SRCVISUAL_JOBS=...`.
+
+`make srcvisual-eval-400` always requests exactly the newest 400 adjacent
+Notepad++ commit pairs. An existing analysis is reused only when its admitted
+srcMove and srcDiff checksums match the current mounted tools. Otherwise it is
+moved to a checksum- and timestamp-labeled `.srcmove-archive-*` directory and a
+new `.srcmove` analysis retains the prior configuration. Archives are never
+deleted or overwritten. The older `make srcvisual-history-refresh` name remains
+an alias for this fixed evaluation.
+
+Use `make srcvisual-eval-check` to build and verify both service mounts without
+starting services or an analysis. Use `make srcvisual-image-rebuild`, or add
+`FULL_REBUILD=1` to an evaluation command, after changing srcVisual application
+code, `srcmove_history` Python code, the Dockerfile, or native dependencies.
+The evaluation leaves srcVisual running at <http://127.0.0.1:5000>.
 
 The controlled study and its saved artifact layout are documented in the
 [srcMove History scaling guide](../srcMove/srcmove_history/benchmarks/README.md).

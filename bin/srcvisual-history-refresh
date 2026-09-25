@@ -6,29 +6,45 @@ WORKSPACE="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$WORKSPACE/srcVisual/compose.yaml"
 HISTORY_REPOSITORY="$WORKSPACE/srcMove/reference-repositories/notepadpp"
 ANALYSIS_ROOT="$HISTORY_REPOSITORY/.srcmove"
+HOST_SRCMOVE="$WORKSPACE/srcMove/build/srcMove"
+BUILD_RECEIPT="$HOST_SRCMOVE.build-receipt.json"
 CONTAINER_SRCDIFF="/opt/srcDiff/bin/srcdiff"
 CONTAINER_SRCMOVE="/opt/srcMove/bin/srcMove"
+SRCVISUAL_IMAGE="srcvisual:local"
 
-PAIRS=400
+PAIRS=10
 JOBS=8
+CHECK_ONLY=0
+REBUILD_IMAGE=0
 
 usage() {
   cat <<'EOF'
-Usage: bin/srcvisual-history-refresh [--pairs N] [--jobs N]
+Usage: bin/srcvisual-history-refresh [--pairs N] [--jobs N] [--check] [--rebuild-image]
 
-Rebuild srcVisual with the current srcMove checkout, archive the existing
-Notepad++ history analysis, start a fresh analysis, and cover the newest N
-adjacent commit pairs.
+Incrementally build the workspace's Linux srcMove executable, verify that
+srcVisual mounts those exact bytes, and evaluate the newest N adjacent
+Notepad++ commit pairs. Analyses are reused only for identical srcMove and
+srcDiff executable checksums; older analyses are archived, never removed.
 
 Options:
-  --pairs N  Number of adjacent commit pairs to cover (default: 400)
-  --jobs N   Number of history-analysis workers (default: 8)
-  -h, --help Show this help
+  --pairs N        Total adjacent commit pairs to cover (default: 10)
+  --jobs N         Number of history-analysis workers (default: 8)
+  --check          Verify the build, image, and service mounts; run no analysis
+  --rebuild-image  Rebuild the full srcVisual image before verification
+  -h, --help       Show this help
 EOF
 }
 
 positive_integer() {
   [[ "$1" =~ ^[1-9][0-9]*$ ]]
+}
+
+sha256_file() {
+  shasum -a 256 "$1" | awk '{print $1}'
+}
+
+compose() {
+  docker compose -f "$COMPOSE_FILE" "$@"
 }
 
 while (( $# > 0 )); do
@@ -48,6 +64,14 @@ while (( $# > 0 )); do
       fi
       JOBS="$2"
       shift 2
+      ;;
+    --check)
+      CHECK_ONLY=1
+      shift
+      ;;
+    --rebuild-image)
+      REBUILD_IMAGE=1
+      shift
       ;;
     -h|--help)
       usage
@@ -78,37 +102,160 @@ if [ ! -d "$HISTORY_REPOSITORY/.git" ]; then
   exit 1
 fi
 
-timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
-archive_root="$HISTORY_REPOSITORY/.srcmove-archive-$timestamp"
-failed_root="$HISTORY_REPOSITORY/.srcmove-failed-$timestamp"
-had_analysis=0
-initializing=0
-
-if [ -e "$ANALYSIS_ROOT" ] && [ ! -d "$ANALYSIS_ROOT" ]; then
-  echo "error: analysis path is not a directory: $ANALYSIS_ROOT" >&2
-  exit 1
-fi
-if [ -e "$archive_root" ]; then
-  echo "error: archive path already exists: $archive_root" >&2
-  exit 1
-fi
-
 cd "$WORKSPACE"
 
-echo "Building srcVisual with the current srcMove checkout."
-docker compose -f "$COMPOSE_FILE" build srcvisual
+echo "Incrementally building the Linux srcMove executable."
+"$SCRIPT_DIR/srcml-dev-shell" bash -lc '
+  set -euo pipefail
+  test -d /workspace/srcML-install/include
+  test -d /workspace/srcML-install/lib
+  if [[ ! -e /workspace/srcReader/build/bin/libsrcreader.so && ! -e /workspace/srcReader/build/bin/libsrcreader.a ]]; then
+    echo "error: srcReader release build is unavailable" >&2
+    exit 1
+  fi
+  cmake -S /workspace/srcMove -B /workspace/srcMove/build -G Ninja \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_CXX_SCAN_FOR_MODULES=OFF \
+    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DWORKSPACE_ROOT=/workspace \
+    -DSRCREADER_BUILD_DIR=/workspace/srcReader/build
+  cmake --build /workspace/srcMove/build --target srcMove
+'
 
-echo "Verifying the packaged native tools."
-docker compose -f "$COMPOSE_FILE" run --rm --no-deps srcvisual \
-  sh -c "test -x '$CONTAINER_SRCDIFF' && test -x '$CONTAINER_SRCMOVE'"
+if [ ! -x "$HOST_SRCMOVE" ]; then
+  echo "error: incremental build did not produce an executable: $HOST_SRCMOVE" >&2
+  exit 1
+fi
 
-echo "Stopping srcVisual services."
-docker compose -f "$COMPOSE_FILE" down
+srcmove_checksum="$(sha256_file "$HOST_SRCMOVE")"
+source_commit="$(git -C "$WORKSPACE/srcMove" rev-parse HEAD)"
+source_branch="$(git -C "$WORKSPACE/srcMove" symbolic-ref --short -q HEAD || true)"
+source_branch="${source_branch:-detached}"
+if [ -n "$(git -C "$WORKSPACE/srcMove" status --porcelain --untracked-files=normal)" ]; then
+  source_state="dirty"
+else
+  source_state="clean"
+fi
+
+if [ ! -f "$BUILD_RECEIPT" ] || ! grep -Fq "\"sha256\": \"$srcmove_checksum\"" "$BUILD_RECEIPT"; then
+  echo "error: srcMove build receipt is missing or does not match the binary" >&2
+  exit 1
+fi
+receipt_id="$(sed -n 's/^[[:space:]]*"receipt_id": "\([^"]*\)",*$/\1/p' "$BUILD_RECEIPT")"
+receipt_source_commit="$(awk '
+  /"srcMove": \{/ { in_srcmove = 1 }
+  in_srcmove && /"commit":/ {
+    value = $0
+    sub(/^.*"commit": "/, "", value)
+    sub(/".*$/, "", value)
+    print value
+    exit
+  }
+' "$BUILD_RECEIPT")"
+receipt_source_dirty="$(awk '
+  /"srcMove": \{/ { in_srcmove = 1 }
+  in_srcmove && /"tracked_dirty":/ {
+    value = $0
+    sub(/^.*"tracked_dirty": /, "", value)
+    sub(/,.*/, "", value)
+    print value
+    exit
+  }
+' "$BUILD_RECEIPT")"
+
+echo "srcMove checkout: $source_commit ($source_branch, $source_state)"
+echo "srcMove binary: $HOST_SRCMOVE"
+echo "srcMove SHA-256: $srcmove_checksum"
+echo "Build receipt: ${receipt_id:-$BUILD_RECEIPT}"
+echo "Receipt source: ${receipt_source_commit:-unknown} (tracked_dirty=${receipt_source_dirty:-unknown})"
+
+if (( REBUILD_IMAGE == 1 )); then
+  echo "Rebuilding the complete srcVisual image."
+  compose build srcvisual
+elif ! docker image inspect "$SRCVISUAL_IMAGE" >/dev/null 2>&1; then
+  echo "error: Docker image '$SRCVISUAL_IMAGE' is unavailable" >&2
+  echo "Run 'make srcvisual-image-rebuild' or retry with FULL_REBUILD=1." >&2
+  exit 1
+fi
+
+# Compose requires the nested bind source even for a read-only verification
+# container. Creating the state directory does not initialize or run analysis.
+mkdir -p "$ANALYSIS_ROOT"
+
+mounted_checksum() {
+  service="$1"
+  path="$2"
+  compose run --rm --no-deps --entrypoint /usr/bin/sha256sum "$service" "$path" \
+    | awk 'END {print $1}'
+}
+
+echo "Verifying srcMove in both Compose service definitions."
+for service in srcvisual history-worker; do
+  observed="$(mounted_checksum "$service" "$CONTAINER_SRCMOVE")"
+  if [ "$observed" != "$srcmove_checksum" ]; then
+    echo "error: $service mounted srcMove checksum $observed; expected $srcmove_checksum" >&2
+    exit 1
+  fi
+  echo "$service srcMove SHA-256: $observed"
+done
+
+srcdiff_checksum="$(mounted_checksum srcvisual "$CONTAINER_SRCDIFF")"
+if ! [[ "$srcdiff_checksum" =~ ^[0-9a-f]{64}$ ]]; then
+  echo "error: could not observe the packaged srcDiff checksum" >&2
+  exit 1
+fi
+echo "Packaged srcDiff SHA-256: $srcdiff_checksum"
+srcmove_version="$(compose run --rm --no-deps --entrypoint "$CONTAINER_SRCMOVE" srcvisual --version | awk 'END {print}')"
+echo "Mounted srcMove version: $srcmove_version"
+
+analysis_tool_checksum() {
+  role="$1"
+  matches=()
+  while IFS= read -r -d '' candidate; do
+    matches+=("$candidate")
+  done < <(find "$ANALYSIS_ROOT/tools" -mindepth 2 -maxdepth 2 -type f -name "$role" -print0 2>/dev/null)
+  if (( ${#matches[@]} != 1 )); then
+    return 1
+  fi
+  sha256_file "${matches[0]}"
+}
+
+active_srcmove_checksum=""
+active_srcdiff_checksum=""
+if [ -f "$ANALYSIS_ROOT/analysis.sqlite3" ]; then
+  if ! active_srcmove_checksum="$(analysis_tool_checksum srcmove)" || \
+     ! active_srcdiff_checksum="$(analysis_tool_checksum srcdiff)"; then
+    echo "error: active analysis does not contain exactly one admitted srcMove and srcDiff executable" >&2
+    exit 1
+  fi
+fi
+
+if (( CHECK_ONLY == 1 )); then
+  if [ -z "$active_srcmove_checksum" ]; then
+    echo "Analysis plan: initialize a new checksum-bound analysis."
+  elif [ "$active_srcmove_checksum" = "$srcmove_checksum" ] && \
+       [ "$active_srcdiff_checksum" = "$srcdiff_checksum" ]; then
+    echo "Analysis plan: reuse the active analysis (tool checksums match)."
+  else
+    echo "Analysis plan: archive the active analysis and initialize a new one."
+    echo "Active srcMove SHA-256: $active_srcmove_checksum"
+    echo "Active srcDiff SHA-256: $active_srcdiff_checksum"
+  fi
+  echo "Evaluation preflight complete; no analysis or service was started."
+  exit 0
+fi
+
+new_analysis=0
+had_analysis=0
+initializing=0
+archive_root=""
+failed_root=""
 
 restore_analysis_on_initialization_failure() {
   status=$?
   if (( status != 0 && initializing == 1 )); then
-    echo "Initialization failed; restoring the previous analysis." >&2
+    echo "Initialization failed; preserving incomplete state and restoring the previous analysis." >&2
     if [ -e "$ANALYSIS_ROOT" ]; then
       mv "$ANALYSIS_ROOT" "$failed_root"
       echo "Incomplete replacement preserved at: $failed_root" >&2
@@ -116,55 +263,73 @@ restore_analysis_on_initialization_failure() {
     if (( had_analysis == 1 )); then
       mv "$archive_root" "$ANALYSIS_ROOT"
     fi
-    docker compose -f "$COMPOSE_FILE" up -d --force-recreate || true
+    compose up -d --force-recreate || true
   fi
   exit "$status"
 }
-trap restore_analysis_on_initialization_failure EXIT
 
-initializing=1
-if [ -d "$ANALYSIS_ROOT" ]; then
-  echo "Archiving the existing analysis at: $archive_root"
+if [ -n "$active_srcmove_checksum" ] && \
+   { [ "$active_srcmove_checksum" != "$srcmove_checksum" ] || \
+     [ "$active_srcdiff_checksum" != "$srcdiff_checksum" ]; }; then
+  echo "Stopping srcVisual before rotating the active analysis."
+  compose down
+  timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
+  archive_root="$HISTORY_REPOSITORY/.srcmove-archive-srcmove-${active_srcmove_checksum}-srcdiff-${active_srcdiff_checksum}-${timestamp}"
+  failed_root="$HISTORY_REPOSITORY/.srcmove-failed-${timestamp}"
+  if [ -e "$archive_root" ] || [ -e "$failed_root" ]; then
+    echo "error: archive or failed-initialization path already exists for $timestamp" >&2
+    exit 1
+  fi
+  echo "Archiving checksum-bound analysis at: $archive_root"
   mv "$ANALYSIS_ROOT" "$archive_root"
   had_analysis=1
+  initializing=1
+  trap restore_analysis_on_initialization_failure EXIT
+  mkdir "$ANALYSIS_ROOT"
+  if [ -f "$archive_root/config.toml" ]; then
+    cp "$archive_root/config.toml" "$ANALYSIS_ROOT/config.toml"
+    echo "Retained the previous history-analysis configuration."
+  fi
+  new_analysis=1
+elif [ -z "$active_srcmove_checksum" ]; then
+  new_analysis=1
+else
+  echo "Reusing analysis for srcMove $srcmove_checksum and srcDiff $srcdiff_checksum."
 fi
 
-mkdir "$ANALYSIS_ROOT"
-
-if (( had_analysis == 1 )) && [ -f "$archive_root/config.toml" ]; then
-  cp "$archive_root/config.toml" "$ANALYSIS_ROOT/config.toml"
-  echo "Retained the previous history-analysis configuration."
+if (( new_analysis == 1 )); then
+  initializing=1
+  if (( had_analysis == 1 )); then
+    trap restore_analysis_on_initialization_failure EXIT
+  fi
+  compose run --rm --no-deps srcvisual \
+    srcmove-history -C /history/repository init
+  initializing=0
+  trap - EXIT
 fi
-
-docker compose -f "$COMPOSE_FILE" run --rm srcvisual \
-  srcmove-history -C /history/repository init
-
-initializing=0
-trap - EXIT
 
 echo "Starting srcVisual at http://127.0.0.1:5000."
-docker compose -f "$COMPOSE_FILE" up -d --force-recreate
+compose up -d --force-recreate
 
 echo "Analyzing the newest $PAIRS adjacent commit pairs with $JOBS workers."
-echo "The new analysis is durable and can be resumed if this command is interrupted."
-if ! docker compose -f "$COMPOSE_FILE" run --rm srcvisual \
-  srcmove-history -C /history/repository run \
-  --pairs "$PAIRS" \
-  --jobs "$JOBS" \
-  --srcdiff "$CONTAINER_SRCDIFF" \
-  --srcmove "$CONTAINER_SRCMOVE"; then
+echo "The checksum-bound analysis is durable and can be resumed if interrupted."
+run_arguments=(
+  srcmove-history -C /history/repository run
+  --pairs "$PAIRS"
+  --jobs "$JOBS"
+)
+if (( new_analysis == 1 )); then
+  run_arguments+=(--srcdiff "$CONTAINER_SRCDIFF" --srcmove "$CONTAINER_SRCMOVE")
+fi
+
+if ! compose run --rm srcvisual "${run_arguments[@]}"; then
   echo "History analysis stopped before successful completion." >&2
-  echo "Resume it without rebuilding or archiving by running:" >&2
-  if [ -f "$ANALYSIS_ROOT/analysis.sqlite3" ]; then
-    echo "  docker compose -f srcVisual/compose.yaml run --rm srcvisual srcmove-history -C /history/repository run --pairs $PAIRS --jobs $JOBS" >&2
-  else
-    echo "  docker compose -f srcVisual/compose.yaml run --rm srcvisual srcmove-history -C /history/repository run --pairs $PAIRS --jobs $JOBS --srcdiff $CONTAINER_SRCDIFF --srcmove $CONTAINER_SRCMOVE" >&2
-  fi
+  echo "Resume it with the same make target; its frozen tool copies will be reused." >&2
   exit 1
 fi
 
-echo "History refresh complete."
-docker compose -f "$COMPOSE_FILE" run --rm srcvisual \
+echo "History evaluation complete."
+compose run --rm srcvisual \
   srcmove-history -C /history/repository status
 if (( had_analysis == 1 )); then
   echo "Previous analysis: $archive_root"
