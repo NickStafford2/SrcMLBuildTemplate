@@ -38,6 +38,7 @@ srcMLBuildTemplate/
   srcDispatch/       optional related checkout
   srcSAX/            optional related checkout
   srcVisual/         visualization application for srcDiff/srcMove results
+  thesis-final/      independent, professor-facing thesis checkout
 ```
 
 ## Repository Roles
@@ -64,6 +65,12 @@ Python backend prepares uploaded srcDiff/srcMove XML and its React frontend
 shows synchronized XML, tree, source-code, diff, and move views. It exists
 because move results, especially moves across files, are difficult to validate
 from XML alone.
+
+`thesis-final` is the independent Git checkout used for the professor-facing
+LaTeX thesis. The scaffold ignores it for the same reason it ignores the source
+repositories: commits and build artifacts belong to that checkout, not to this
+workspace repository. Draft thesis material remains in
+`srcMove/doc/thesis-workspace/` until it is deliberately promoted.
 
 The main data flow is:
 
