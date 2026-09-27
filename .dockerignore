@@ -28,6 +28,7 @@ srcMove/bigMoveBench/cache
 srcMove/bigMoveBench/data
 srcMove/old
 srcMove/reference-repositories
+thesis-workspace
 out.txt
 
 # srcReader's canonical build script verifies its expected branch. Preserve only

@@ -1,7 +1,7 @@
 # Documentation Policy
 
 This policy defines documentation roles across `SrcMLBuildTemplate`, `srcMove`,
-and `srcVisual`. The repositories remain independent, but readers should be able
+and `srcDiffVisual`. The repositories remain independent, but readers should be able
 to navigate them using the same expectations.
 
 ## Core Rule

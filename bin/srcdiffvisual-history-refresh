@@ -3,14 +3,14 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE="$(cd -- "$SCRIPT_DIR/.." && pwd)"
-COMPOSE_FILE="$WORKSPACE/srcVisual/compose.yaml"
+COMPOSE_FILE="$WORKSPACE/srcDiffVisual/compose.yaml"
 HISTORY_REPOSITORY="$WORKSPACE/srcMove/reference-repositories/notepadpp"
 ANALYSIS_ROOT="$HISTORY_REPOSITORY/.srcmove"
 HOST_SRCMOVE="$WORKSPACE/srcMove/build/srcMove"
 BUILD_RECEIPT="$HOST_SRCMOVE.build-receipt.json"
 CONTAINER_SRCDIFF="/opt/srcDiff/bin/srcdiff"
 CONTAINER_SRCMOVE="/opt/srcMove/bin/srcMove"
-SRCVISUAL_IMAGE="srcvisual:local"
+SRCDIFFVISUAL_IMAGE="srcdiffvisual:local"
 
 PAIRS=10
 JOBS=8
@@ -19,10 +19,10 @@ REBUILD_IMAGE=0
 
 usage() {
   cat <<'EOF'
-Usage: bin/srcvisual-history-refresh [--pairs N] [--jobs N] [--check] [--rebuild-image]
+Usage: bin/srcdiffvisual-history-refresh [--pairs N] [--jobs N] [--check] [--rebuild-image]
 
 Incrementally build the workspace's Linux srcMove executable, verify that
-srcVisual mounts those exact bytes, and evaluate the newest N adjacent
+srcDiffVisual mounts those exact bytes, and evaluate the newest N adjacent
 Notepad++ commit pairs. Analyses are reused only for identical srcMove and
 srcDiff executable checksums; older analyses are archived, never removed.
 
@@ -30,7 +30,7 @@ Options:
   --pairs N        Total adjacent commit pairs to cover (default: 10)
   --jobs N         Number of history-analysis workers (default: 8)
   --check          Verify the build, image, and service mounts; run no analysis
-  --rebuild-image  Rebuild the full srcVisual image before verification
+  --rebuild-image  Rebuild the full srcDiffVisual image before verification
   -h, --help       Show this help
 EOF
 }
@@ -94,7 +94,7 @@ if ! docker compose version >/dev/null 2>&1; then
   exit 1
 fi
 if [ ! -f "$COMPOSE_FILE" ]; then
-  echo "error: srcVisual Compose file not found: $COMPOSE_FILE" >&2
+  echo "error: srcDiffVisual Compose file not found: $COMPOSE_FILE" >&2
   exit 1
 fi
 if [ ! -d "$HISTORY_REPOSITORY/.git" ]; then
@@ -171,11 +171,11 @@ echo "Build receipt: ${receipt_id:-$BUILD_RECEIPT}"
 echo "Receipt source: ${receipt_source_commit:-unknown} (tracked_dirty=${receipt_source_dirty:-unknown})"
 
 if (( REBUILD_IMAGE == 1 )); then
-  echo "Rebuilding the complete srcVisual image."
-  compose build srcvisual
-elif ! docker image inspect "$SRCVISUAL_IMAGE" >/dev/null 2>&1; then
-  echo "error: Docker image '$SRCVISUAL_IMAGE' is unavailable" >&2
-  echo "Run 'make srcvisual-image-rebuild' or retry with FULL_REBUILD=1." >&2
+  echo "Rebuilding the complete srcDiffVisual image."
+  compose build srcdiffvisual
+elif ! docker image inspect "$SRCDIFFVISUAL_IMAGE" >/dev/null 2>&1; then
+  echo "error: Docker image '$SRCDIFFVISUAL_IMAGE' is unavailable" >&2
+  echo "Run 'make srcdiffvisual-image-rebuild' or retry with FULL_REBUILD=1." >&2
   exit 1
 fi
 
@@ -191,7 +191,7 @@ mounted_checksum() {
 }
 
 echo "Verifying srcMove in both Compose service definitions."
-for service in srcvisual history-worker; do
+for service in srcdiffvisual history-worker; do
   observed="$(mounted_checksum "$service" "$CONTAINER_SRCMOVE")"
   if [ "$observed" != "$srcmove_checksum" ]; then
     echo "error: $service mounted srcMove checksum $observed; expected $srcmove_checksum" >&2
@@ -200,13 +200,13 @@ for service in srcvisual history-worker; do
   echo "$service srcMove SHA-256: $observed"
 done
 
-srcdiff_checksum="$(mounted_checksum srcvisual "$CONTAINER_SRCDIFF")"
+srcdiff_checksum="$(mounted_checksum srcdiffvisual "$CONTAINER_SRCDIFF")"
 if ! [[ "$srcdiff_checksum" =~ ^[0-9a-f]{64}$ ]]; then
   echo "error: could not observe the packaged srcDiff checksum" >&2
   exit 1
 fi
 echo "Packaged srcDiff SHA-256: $srcdiff_checksum"
-srcmove_version="$(compose run --rm --no-deps --entrypoint "$CONTAINER_SRCMOVE" srcvisual --version | awk 'END {print}')"
+srcmove_version="$(compose run --rm --no-deps --entrypoint "$CONTAINER_SRCMOVE" srcdiffvisual --version | awk 'END {print}')"
 echo "Mounted srcMove version: $srcmove_version"
 
 analysis_tool_checksum() {
@@ -271,7 +271,7 @@ restore_analysis_on_initialization_failure() {
 if [ -n "$active_srcmove_checksum" ] && \
    { [ "$active_srcmove_checksum" != "$srcmove_checksum" ] || \
      [ "$active_srcdiff_checksum" != "$srcdiff_checksum" ]; }; then
-  echo "Stopping srcVisual before rotating the active analysis."
+  echo "Stopping srcDiffVisual before rotating the active analysis."
   compose down
   timestamp="$(date -u +%Y%m%dT%H%M%SZ)"
   archive_root="$HISTORY_REPOSITORY/.srcmove-archive-srcmove-${active_srcmove_checksum}-srcdiff-${active_srcdiff_checksum}-${timestamp}"
@@ -302,13 +302,13 @@ if (( new_analysis == 1 )); then
   if (( had_analysis == 1 )); then
     trap restore_analysis_on_initialization_failure EXIT
   fi
-  compose run --rm --no-deps srcvisual \
+  compose run --rm --no-deps srcdiffvisual \
     srcmove-history -C /history/repository init
   initializing=0
   trap - EXIT
 fi
 
-echo "Starting srcVisual at http://127.0.0.1:5000."
+echo "Starting srcDiffVisual at http://127.0.0.1:5000."
 compose up -d --force-recreate
 
 echo "Analyzing the newest $PAIRS adjacent commit pairs with $JOBS workers."
@@ -322,14 +322,14 @@ if (( new_analysis == 1 )); then
   run_arguments+=(--srcdiff "$CONTAINER_SRCDIFF" --srcmove "$CONTAINER_SRCMOVE")
 fi
 
-if ! compose run --rm srcvisual "${run_arguments[@]}"; then
+if ! compose run --rm srcdiffvisual "${run_arguments[@]}"; then
   echo "History analysis stopped before successful completion." >&2
   echo "Resume it with the same make target; its frozen tool copies will be reused." >&2
   exit 1
 fi
 
 echo "History evaluation complete."
-compose run --rm srcvisual \
+compose run --rm srcdiffvisual \
   srcmove-history -C /history/repository status
 if (( had_analysis == 1 )); then
   echo "Previous analysis: $archive_root"

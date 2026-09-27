@@ -6,13 +6,13 @@ source "$SCRIPT_DIR/utils.sh"
 
 usage() {
   cat <<'EOF'
-Usage: ./build_srcVisual.sh [workspace]
+Usage: ./build_srcDiffVisual.sh [workspace]
 
   workspace   Optional workspace directory. Defaults to this script's directory.
 
 Environment:
-  SRCVISUAL_REPO_URL  Repository URL used when ./srcVisual is missing.
-                      Default: https://github.com/NickStafford2/srcVisual.git
+  SRCDIFFVISUAL_REPO_URL  Repository URL used when ./srcDiffVisual is missing.
+                      Default: https://github.com/NickStafford2/srcDiffVisual.git
 EOF
 }
 
@@ -42,13 +42,13 @@ while [ "$#" -gt 0 ]; do
 done
 
 WS="$(resolve_ws "$WS_ARG")"
-SRCVISUAL="$WS/srcVisual"
-FRONTEND="$SRCVISUAL/frontend"
-VENV="$SRCVISUAL/.venv"
-SRCVISUAL_REPO_URL="${SRCVISUAL_REPO_URL:-https://github.com/NickStafford2/srcVisual.git}"
+SRCDIFFVISUAL="$WS/srcDiffVisual"
+FRONTEND="$SRCDIFFVISUAL/frontend"
+VENV="$SRCDIFFVISUAL/.venv"
+SRCDIFFVISUAL_REPO_URL="${SRCDIFFVISUAL_REPO_URL:-https://github.com/NickStafford2/srcDiffVisual.git}"
 
 echo "=== Workspace: $WS ==="
-echo "srcVisual source:       $SRCVISUAL"
+echo "srcDiffVisual source:       $SRCDIFFVISUAL"
 echo "Python environment:     $VENV"
 echo "Frontend output:        $FRONTEND/dist"
 echo ""
@@ -60,21 +60,21 @@ require_cmd npm
 echo "✓ Commands found"
 echo ""
 
-echo "=== [2/4] Checking for srcVisual repository ==="
-if [ -d "$SRCVISUAL/.git" ]; then
-  echo "↻ srcVisual repo already exists — skipping clone"
-elif [ -f "$SRCVISUAL/pyproject.toml" ]; then
-  echo "↻ srcVisual source directory already exists without git metadata — skipping clone"
+echo "=== [2/4] Checking for srcDiffVisual repository ==="
+if [ -d "$SRCDIFFVISUAL/.git" ]; then
+  echo "↻ srcDiffVisual repo already exists — skipping clone"
+elif [ -f "$SRCDIFFVISUAL/pyproject.toml" ]; then
+  echo "↻ srcDiffVisual source directory already exists without git metadata — skipping clone"
 else
-  echo "Cloning srcVisual into: $SRCVISUAL"
-  git clone "$SRCVISUAL_REPO_URL" "$SRCVISUAL"
-  echo "✓ srcVisual repository cloned"
+  echo "Cloning srcDiffVisual into: $SRCDIFFVISUAL"
+  git clone "$SRCDIFFVISUAL_REPO_URL" "$SRCDIFFVISUAL"
+  echo "✓ srcDiffVisual repository cloned"
 fi
 echo ""
 
 echo "=== [3/4] Installing Python backend ==="
-if [ ! -f "$SRCVISUAL/pyproject.toml" ]; then
-  echo "✗ pyproject.toml not found at: $SRCVISUAL/pyproject.toml"
+if [ ! -f "$SRCDIFFVISUAL/pyproject.toml" ]; then
+  echo "✗ pyproject.toml not found at: $SRCDIFFVISUAL/pyproject.toml"
   exit 1
 fi
 
@@ -86,7 +86,7 @@ if [ ! -x "$VENV/bin/python" ]; then
   fi
 fi
 
-"$VENV/bin/python" -m pip install --editable "$SRCVISUAL"
+"$VENV/bin/python" -m pip install --editable "$SRCDIFFVISUAL"
 echo "✓ Python backend installed"
 echo ""
 
@@ -100,6 +100,6 @@ npm --prefix "$FRONTEND" ci
 npm --prefix "$FRONTEND" run build
 
 echo ""
-echo "✓ srcVisual build complete"
+echo "✓ srcDiffVisual build complete"
 echo "Backend command:        $VENV/bin/web"
 echo "Frontend output:        $FRONTEND/dist"

@@ -2,11 +2,23 @@
 
 Guidance for Codex and other AI agents working in this workspace.
 
+## Immediate Priority
+
+The master's thesis is the primary workspace objective. As of 2026-09-26, it
+is due in seven days. Prioritize work that directly improves the thesis,
+validates its claims, completes required experiments, or prepares professional
+review material. Defer unrelated cleanup and speculative features unless they
+unblock the thesis.
+
+Urgency does not relax the evidence standard. Do not invent results,
+citations, implementation behavior, novelty claims, or conclusions. Keep
+exploratory results visibly separate from final evidence.
+
 ## Workspace Model
 
 This repository is a workspace scaffold, not a monorepo. The sibling
 directories `srcML/`, `srcDiff/`, `srcReader/`, `srcMove/`, `srcDispatch/`,
-`srcSAX/`, and `srcVisual/` are separate source checkouts and are ignored by the
+`srcSAX/`, and `srcDiffVisual/` are separate source checkouts and are ignored by the
 top-level git repo.
 
 Read [docs/workspace.md](docs/workspace.md) before changing setup scripts,
@@ -69,20 +81,47 @@ When building manually inside Docker, use dependency order:
 `srcMove` also has its own agent guidance at [srcMove/AGENTS.md](srcMove/AGENTS.md).
 When working inside `srcMove`, follow both this file and the nested guidance.
 
-## Working directory
-Unless otherwise stated, you should work in the srcMove/ directory. You may sometimes 
-work in srcVisual. And on rare occasion srcReader. The user is a developer on all three.
-Most work is in the srcMove directory. Do not randomly try to write a master's thesis 
-for the user. He will ask if he wants assistance on that.
+## Thesis and Repository Roles
 
-## Continious Improvement
+- `thesis-workspace/` is the private thesis repository and the default location
+  for current thesis work. The AI reference draft lives in
+  `thesis-workspace/thesis-draft-ai/`; Nicholas's working outline and drafts
+  live in `thesis-workspace/thesis-draft-final/`. Bibliography data, references,
+  notes, and research evidence remain in their corresponding private directories.
+- `thesis-workspace/references/decker/DeckerDissertation.docx` is the immutable
+  Word formatting authority. Michael Decker explicitly instructed the user to
+  use his dissertation as the starting point.
+- `thesis-workspace/thesis-final/` is a separate public Git repository visible
+  to professors. Only polished `Thesis.docx`, its matching Word-exported
+  `Thesis.pdf`, and minimal professional guidance belong there.
+- `srcMove/` is the principal thesis subject and the user's primary research
+  contribution. Most implementation, evaluation, and technical verification
+  work should focus here.
+- `srcDiffVisual/` is a companion visualization system created by the user. It
+  supports inspection and explanation of srcDiff and srcMove results.
+- `srcReader/` is a supporting library that the user has modified for the
+  srcMove toolchain.
+- `srcDiff/` supplies the structured differences consumed by srcMove.
+- `srcML/` supplies the source-code XML representation used by srcDiff and the
+  downstream tools.
 
-AI Agents are highly encouraged to give the user suggestions that will improve the
-quality of the documentaiton and the repo in general. If anything is difficult to 
-understand, give the user suggestions. The immediate priority of this whole application
-is to produce quality results for a Master's Thesis for srcMove and srcVisual. These 
-are move detection tools that build upon srdML and srcDiff. The user cares deeply about
-elegance, folowing best practices, understandability, and simplicity. The user wants 
-quality docs that do not repeat the same thing multiple times. Single source of truth is 
-essential. We do not ever want multiple docs needlessly repeating the same thing. Brevity 
-is key.
+The core research flow is:
+
+```text
+source code -> srcML -> srcDiff -> srcMove -> srcDiffVisual
+```
+
+Work in the repository that owns the fact or implementation being changed.
+Thesis prose belongs in the private thesis workspace; code and canonical
+technical documentation belong in the relevant source repository.
+
+## Continuous Improvement
+
+- Proactively suggest improvements that materially strengthen the thesis,
+  documentation, experiments, or repository clarity within the deadline.
+- Prefer elegant, simple, understandable solutions and established best
+  practices.
+- Keep one source of truth for each durable fact. Link to canonical documents
+  instead of duplicating them.
+- Keep guidance brief, fix confusing or stale documentation encountered during
+  normal work, and call out blockers early.

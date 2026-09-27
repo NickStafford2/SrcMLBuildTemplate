@@ -4,7 +4,7 @@ ROLE ?= tuning
 SEED ?= 0
 VERIFY_SOURCE ?= 0
 
-.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test history-scaling srcvisual-eval-check srcvisual-eval-fast srcvisual-eval-400 srcvisual-image-rebuild srcvisual-history-refresh bigmovebench-preflight bigmovebench-suite lock-status lock-verify lock-update
+.PHONY: help docker-build docker-rebuild shell srcmove build build-dev build-release build-production test history-scaling srcdiffvisual-eval-check srcdiffvisual-eval-fast srcdiffvisual-eval-400 srcdiffvisual-image-rebuild srcdiffvisual-history-refresh bigmovebench-preflight bigmovebench-suite lock-status lock-verify lock-update
 
 help:
 	@printf '%s\n' 'Available targets:'
@@ -18,10 +18,10 @@ help:
 	@printf '  %-28s %s\n' 'make build-production' 'Release/test/package build where supported'
 	@printf '  %-28s %s\n' 'make test' 'Run srcMove tests in Docker'
 	@printf '  %-28s %s\n' 'make history-scaling' 'Measure srcMove History throughput across JOBS'
-	@printf '  %-28s %s\n' 'make srcvisual-eval-check' 'Build and verify the mounted srcMove binary; run no analysis'
-	@printf '  %-28s %s\n' 'make srcvisual-eval-fast' 'Evaluate a small Notepad++ sample (default: 10 pairs)'
-	@printf '  %-28s %s\n' 'make srcvisual-eval-400' 'Evaluate the fixed 400-pair Notepad++ set'
-	@printf '  %-28s %s\n' 'make srcvisual-image-rebuild' 'Rebuild the full srcVisual image'
+	@printf '  %-28s %s\n' 'make srcdiffvisual-eval-check' 'Build and verify the mounted srcMove binary; run no analysis'
+	@printf '  %-28s %s\n' 'make srcdiffvisual-eval-fast' 'Evaluate a small Notepad++ sample (default: 10 pairs)'
+	@printf '  %-28s %s\n' 'make srcdiffvisual-eval-400' 'Evaluate the fixed 400-pair Notepad++ set'
+	@printf '  %-28s %s\n' 'make srcdiffvisual-image-rebuild' 'Rebuild the full srcDiffVisual image'
 	@printf '  %-28s %s\n' 'make bigmovebench-preflight' 'Check the local BigCloneBench installation'
 	@printf '  %-28s %s\n' 'make bigmovebench-suite' 'Run BigMoveBench PROFILE=small|medium (full is slow)'
 	@printf '  %-28s %s\n' 'make lock-status' 'Compare source checkouts with workspace.lock.json'
@@ -63,24 +63,24 @@ history-scaling:
 		SCRATCH_ROOT="$(SCRATCH_ROOT)" DIRECTORY="$(DIRECTORY)" \
 		UPDATE="$(UPDATE)" OFFLINE="$(OFFLINE)"
 
-SRCVISUAL_JOBS ?= 8
-SRCVISUAL_FAST_PAIRS ?= 10
-SRCVISUAL_REBUILD_ARG = $(if $(filter 1 yes true,$(FULL_REBUILD)),--rebuild-image,)
+SRCDIFFVISUAL_JOBS ?= 8
+SRCDIFFVISUAL_FAST_PAIRS ?= 10
+SRCDIFFVISUAL_REBUILD_ARG = $(if $(filter 1 yes true,$(FULL_REBUILD)),--rebuild-image,)
 
-srcvisual-eval-check:
-	./bin/srcvisual-history-refresh --check $(SRCVISUAL_REBUILD_ARG)
+srcdiffvisual-eval-check:
+	./bin/srcdiffvisual-history-refresh --check $(SRCDIFFVISUAL_REBUILD_ARG)
 
-srcvisual-eval-fast:
-	./bin/srcvisual-history-refresh --pairs "$(SRCVISUAL_FAST_PAIRS)" --jobs "$(SRCVISUAL_JOBS)" $(SRCVISUAL_REBUILD_ARG)
+srcdiffvisual-eval-fast:
+	./bin/srcdiffvisual-history-refresh --pairs "$(SRCDIFFVISUAL_FAST_PAIRS)" --jobs "$(SRCDIFFVISUAL_JOBS)" $(SRCDIFFVISUAL_REBUILD_ARG)
 
-srcvisual-eval-400:
-	./bin/srcvisual-history-refresh --pairs 400 --jobs "$(SRCVISUAL_JOBS)" $(SRCVISUAL_REBUILD_ARG)
+srcdiffvisual-eval-400:
+	./bin/srcdiffvisual-history-refresh --pairs 400 --jobs "$(SRCDIFFVISUAL_JOBS)" $(SRCDIFFVISUAL_REBUILD_ARG)
 
-srcvisual-image-rebuild:
-	docker compose -f srcVisual/compose.yaml build srcvisual
+srcdiffvisual-image-rebuild:
+	docker compose -f srcDiffVisual/compose.yaml build srcdiffvisual
 
-# Backward-compatible name for the fixed research evaluation.
-srcvisual-history-refresh: srcvisual-eval-400
+# Short alias for the fixed research evaluation.
+srcdiffvisual-history-refresh: srcdiffvisual-eval-400
 
 bigmovebench-preflight:
 	@./bin/srcml-dev-shell make --no-print-directory -C srcMove bigmovebench-preflight

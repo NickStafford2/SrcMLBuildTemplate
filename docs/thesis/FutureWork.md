@@ -6,7 +6,7 @@ Already started writing
 
 Simply describes srcMove capibilities
 
-## SrcVisual Paper / Presentation
+## srcDiffVisual Paper / Presentation
 
 I do not know if i will eventually publish or simply present.
 

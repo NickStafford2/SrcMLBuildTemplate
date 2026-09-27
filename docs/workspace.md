@@ -22,7 +22,7 @@ srcMLBuildTemplate/
   build_srcDiff.sh
   build_srcReader.sh
   build_srcMove.sh
-  build_srcVisual.sh
+  build_srcDiffVisual.sh
 
   srcML/             upstream srcML checkout
   srcML-build/       generated srcML build tree
@@ -37,8 +37,9 @@ srcMLBuildTemplate/
   srcMove/           srcMove checkout
   srcDispatch/       optional related checkout
   srcSAX/            optional related checkout
-  srcVisual/         visualization application for srcDiff/srcMove results
-  thesis-final/      independent, professor-facing thesis checkout
+  srcDiffVisual/         visualization application for srcDiff/srcMove results
+  thesis-workspace/  independent private thesis workspace repository
+    thesis-final/    independent, public professor-facing thesis checkout
 ```
 
 ## Repository Roles
@@ -60,22 +61,26 @@ XML streams.
 `srcMove` post-processes srcDiff XML and annotates matched
 `diff:delete`/`diff:insert` regions with move metadata.
 
-`srcVisual` is a downstream inspection application for srcDiff and srcMove. Its
+`srcDiffVisual` is a downstream inspection application for srcDiff and srcMove. Its
 Python backend prepares uploaded srcDiff/srcMove XML and its React frontend
 shows synchronized XML, tree, source-code, diff, and move views. It exists
 because move results, especially moves across files, are difficult to validate
 from XML alone.
 
-`thesis-final` is the independent Git checkout used for the professor-facing
-LaTeX thesis. The scaffold ignores it for the same reason it ignores the source
-repositories: commits and build artifacts belong to that checkout, not to this
-workspace repository. Draft thesis material remains in
-`srcMove/doc/thesis-workspace/` until it is deliberately promoted.
+`thesis-workspace/` is an independent private Git repository for thesis drafts,
+references, scratch notes, formatting work, and research evidence. It is
+ignored by this scaffold.
+
+`thesis-workspace/thesis-final/` is the independent public Git checkout used
+for professor-facing, review-ready thesis material. Its commits and build
+artifacts belong to that checkout, not to either containing repository. Draft
+and reference material belongs to the private parent workspace, not to srcMove
+or the public final repository.
 
 The main data flow is:
 
 ```text
-source code -> srcML XML -> srcDiff XML -> srcMove annotations -> srcVisual
+source code -> srcML XML -> srcDiff XML -> srcMove annotations -> srcDiffVisual
 ```
 
 ## Locked Source Revisions
@@ -107,7 +112,7 @@ lockfile checksum, observed binary checksums, and provenance status so stale
 build artifacts cannot be mistaken for locked builds.
 
 `srcMove` is the primary research project and master's thesis deliverable.
-`srcVisual` supports that research by making its results understandable and
+`srcDiffVisual` supports that research by making its results understandable and
 inspectable; it may also evolve into a separately hosted application.
 
 ## Clone Behavior
@@ -131,11 +136,11 @@ exist. Until the pending upstream changes are merged, it checks out the
 `https://github.com/NickStafford2/srcMove.git` if the directory does not already
 exist. Override with `SRCMOVE_REPO_URL` when needed.
 
-`build_srcVisual.sh` clones `srcVisual/` from
-`https://github.com/NickStafford2/srcVisual.git` if the directory does not
-already exist. Override with `SRCVISUAL_REPO_URL` when needed. It installs the
-Python backend into `srcVisual/.venv` and builds the React frontend into
-`srcVisual/frontend/dist`.
+`build_srcDiffVisual.sh` clones `srcDiffVisual/` from
+`https://github.com/NickStafford2/srcDiffVisual.git` if the directory does not
+already exist. Override with `SRCDIFFVISUAL_REPO_URL` when needed. It installs the
+Python backend into `srcDiffVisual/.venv` and builds the React frontend into
+`srcDiffVisual/frontend/dist`.
 
 `build_srcDispatch.sh` is intentionally not part of the standard bootstrap path
 yet. It exits with a clear message instead of sourcing missing placeholder
@@ -221,34 +226,34 @@ make build-production # release/test/package path where supported
 make test            # run srcMove tests in Docker
 make history-scaling \
   CASE=sqlite START=<commit> COUNT=300 JOBS=1,2,4 # benchmark history scaling
-make srcvisual-eval-check # verify the build/mount path without an analysis
-make srcvisual-eval-fast  # develop against 10 Notepad++ pairs by default
-make srcvisual-eval-400   # run the fixed research evaluation
+make srcdiffvisual-eval-check # verify the build/mount path without an analysis
+make srcdiffvisual-eval-fast  # develop against 10 Notepad++ pairs by default
+make srcdiffvisual-eval-400   # run the fixed research evaluation
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
 
-After changing the srcMove algorithm, `make srcvisual-eval-fast` incrementally
+After changing the srcMove algorithm, `make srcdiffvisual-eval-fast` incrementally
 rebuilds the Linux `srcMove/build/srcMove` target in the workspace development
-container. srcVisual bind-mounts that exact executable into both Compose
+container. srcDiffVisual bind-mounts that exact executable into both Compose
 services and Compose one-off containers, avoiding a rebuild of the complete
 application image. The command prints the srcMove checkout state, build receipt,
 and mounted srcMove/srcDiff checksums before doing work. Override the small
-sample with `SRCVISUAL_FAST_PAIRS=...` and worker count with
-`SRCVISUAL_JOBS=...`.
+sample with `SRCDIFFVISUAL_FAST_PAIRS=...` and worker count with
+`SRCDIFFVISUAL_JOBS=...`.
 
-`make srcvisual-eval-400` always requests exactly the newest 400 adjacent
+`make srcdiffvisual-eval-400` always requests exactly the newest 400 adjacent
 Notepad++ commit pairs. An existing analysis is reused only when its admitted
 srcMove and srcDiff checksums match the current mounted tools. Otherwise it is
 moved to a checksum- and timestamp-labeled `.srcmove-archive-*` directory and a
 new `.srcmove` analysis retains the prior configuration. Archives are never
-deleted or overwritten. The older `make srcvisual-history-refresh` name remains
-an alias for this fixed evaluation.
+deleted or overwritten. The shorter `make srcdiffvisual-history-refresh` target
+is an alias for this fixed evaluation.
 
-Use `make srcvisual-eval-check` to build and verify both service mounts without
-starting services or an analysis. Use `make srcvisual-image-rebuild`, or add
-`FULL_REBUILD=1` to an evaluation command, after changing srcVisual application
+Use `make srcdiffvisual-eval-check` to build and verify both service mounts without
+starting services or an analysis. Use `make srcdiffvisual-image-rebuild`, or add
+`FULL_REBUILD=1` to an evaluation command, after changing srcDiffVisual application
 code, `srcmove_history` Python code, the Dockerfile, or native dependencies.
-The evaluation leaves srcVisual running at <http://127.0.0.1:5000>.
+The evaluation leaves srcDiffVisual running at <http://127.0.0.1:5000>.
 
 The controlled study and its saved artifact layout are documented in the
 [srcMove History scaling guide](../srcMove/srcmove_history/benchmarks/README.md).
