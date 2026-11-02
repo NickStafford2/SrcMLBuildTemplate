@@ -1,4 +1,14 @@
 #!/usr/bin/env bash
+# Run the workspace-built tool; this launcher does not build it.
+# macOS uses Docker with the workspace root as cwd, so pass workspace-relative
+# input/output paths. Linux runs directly and preserves the caller's cwd.
 set -euo pipefail
 WS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-exec "$WS/srcML-install/bin/srcml" "$@"
+
+TOOL_PATH="srcML-install/bin/srcml"
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  exec "$WS/bin/srcml-dev-shell" "/workspace/$TOOL_PATH" "$@"
+fi
+
+exec "$WS/$TOOL_PATH" "$@"

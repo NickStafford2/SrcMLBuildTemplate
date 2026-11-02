@@ -138,34 +138,71 @@ need a separate backup decision; do not force-add every generated directory.
    cd SrcMLBuildTemplate
    ```
 
-3. Clone the independent repositories into the paths in
-   [Expected Directory Structure](#expected-directory-structure), using the
-   saved writable remotes and branches. Restore the recorded commits before
-   building. This is particularly important for modified dependencies: default
-   upstream clones may omit personal changes. Restore the private thesis repo
-   and its nested public checkout separately.
-4. Run `make lock-status`. For an older locked environment, manually check out
+3. Install Python 3 on the host and preview the saved source recovery:
+
+   ```bash
+   ./bin/workspace-recover --include-thesis
+   ./bin/workspace-recover --include-thesis --apply
+   ./bin/workspace-recover --include-thesis --verify
+   ```
+
+   Omit `--include-thesis` to recover only the five software checkouts. Private
+   thesis access and access to the public final-document repository are needed
+   for the complete recovery. The helper reads `workspace.recovery.json`, clones
+   missing directories, and selects the recorded branch and full commit only
+   in newly cloned repositories. It restores the srcDiff personal profiler
+   branch as well. Existing directories are never switched or overwritten;
+   mismatches are reported for review. If a clone is interrupted, review its
+   partial directory before retrying. Verification is local: it checks tracked
+   cleanliness, origin, branch and commit IDs, not ignored/untracked files or
+   live GitHub.
+4. The recovery snapshot records the observed November 2, 2026 sources across
+   seven independent repositories. It is separate from the older four-tool
+   `workspace.lock.json`; its commits are observations, not a newly validated
+   compatibility milestone. Run `make lock-status` to inspect that older lock.
+   For an older locked environment, manually check out
    the four commits in `workspace.lock.json` and run `make lock-verify`.
    The lock helper does not clone or check out anything, and does not cover
    srcDiffVisual or either thesis repository. Do not update the lock just to
    hide a recovery mismatch.
-5. Run `make build` and `make test` from the host. Docker recreates the Linux
-   environment and generated native outputs. Follow the owning repository's
-   instructions for the viewer and research datasets; verify preserved evidence
-   before starting new analyses.
+   The srcReader builder normally selects `mover`; for a detached historical
+   build, create a local branch at the locked srcReader commit and supply its
+   name inside Docker, for example
+   `./bin/srcml-dev-shell bash -lc 'SRCREADER_BRANCH=locked-reader ./bin/srcml-build-srcmove'`.
+   Do not run the default builder after pinning a different reader revision.
+5. Run `make build`, then `./bin/srcml-dev-shell ./test_src_tools.sh` from the
+   host. Docker recreates the Linux environment and generated native outputs.
+   Run `make test` for correctness; preserve and investigate failures rather than
+   assuming historical pass counts describe the restored checkout. The build
+   scripts clean generated build directories and do not restore old binaries.
+6. In the private thesis checkout, follow its README to verify and restore the
+   retained evidence archive. Old live `.srcmove*` analysis state is intentionally
+   rerunnable. External BigCloneBench/IJaDataset installation is a separate
+   prerequisite for new dataset experiments, not for inspecting saved evidence.
+7. Follow [srcDiffVisual's setup guide](../srcDiffVisual/README.md#run-locally-with-docker)
+   to prepare reference clones and mounts before starting the viewer. Its
+   Compose services require the workspace-built `srcMove/build/srcMove` file;
+   building the application image alone does not create that host bind source.
+   Frontend/backend dependencies belong to the viewer's Docker stages, not the
+   root development image. The viewer can start fresh and analyses can be rerun.
 
-The build scripts can clone missing dependencies, but do not restore locked
-revisions automatically. At the November 2, 2026 local audit, the existing
-`srcDiffVisual` checkout's origin was
-`git@github.com:NickStafford2/srcVisual.git`, whereas the bootstrap default uses
-`NickStafford2/srcDiffVisual.git`. Remote availability and any GitHub redirect
-were not verified. Use the saved remote when restoring; the bootstrap accepts
-`SRCDIFFVISUAL_REPO_URL` as documented below.
+To establish a newer recovery baseline, commit and push changes in the source
+and thesis repos, then run `./bin/workspace-recover --capture` and commit the
+updated snapshot with the root setup. Capture requires clean tracked files and
+named branches in all seven checkouts; it does not check remote availability or
+save untracked files. Do not move the historical four-tool lock simply to match
+it. GitHub SSH keys live on the host; Docker does
+not inherit the host's SSH agent. Cloning these checkouts on the host avoids
+requiring private-repository credentials in build containers.
+
+The build scripts can clone missing dependencies, but do not restore recorded
+revisions automatically. Use the recovery helper before building a saved setup.
 
 ## Locked Source Revisions
 
-The tracked `workspace.lock.json` records the exact srcML, srcDiff, srcReader,
-and srcMove commits known to work together. It coordinates the independent
+The tracked `workspace.lock.json` records an older set of exact srcML, srcDiff,
+srcReader and srcMove revisions. It does not match the current observed recovery
+snapshot or prove a fresh build. It coordinates the independent
 repositories without making them part of the top-level Git repository.
 
 Use the top-level Make targets to inspect or update it:
@@ -216,7 +253,7 @@ exist. Until the pending upstream changes are merged, it checks out the
 exist. Override with `SRCMOVE_REPO_URL` when needed.
 
 `build_srcDiffVisual.sh` clones `srcDiffVisual/` from
-`https://github.com/NickStafford2/srcDiffVisual.git` if the directory does not
+`https://github.com/NickStafford2/srcVisual.git` if the directory does not
 already exist. Override with `SRCDIFFVISUAL_REPO_URL` when needed. It installs the
 Python backend into `srcDiffVisual/.venv` and builds the React frontend into
 `srcDiffVisual/frontend/dist`.

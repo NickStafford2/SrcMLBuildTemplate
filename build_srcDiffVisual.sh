@@ -12,7 +12,7 @@ Usage: ./build_srcDiffVisual.sh [workspace]
 
 Environment:
   SRCDIFFVISUAL_REPO_URL  Repository URL used when ./srcDiffVisual is missing.
-                      Default: https://github.com/NickStafford2/srcDiffVisual.git
+                      Default: https://github.com/NickStafford2/srcVisual.git
 EOF
 }
 
@@ -45,7 +45,7 @@ WS="$(resolve_ws "$WS_ARG")"
 SRCDIFFVISUAL="$WS/srcDiffVisual"
 FRONTEND="$SRCDIFFVISUAL/frontend"
 VENV="$SRCDIFFVISUAL/.venv"
-SRCDIFFVISUAL_REPO_URL="${SRCDIFFVISUAL_REPO_URL:-https://github.com/NickStafford2/srcDiffVisual.git}"
+SRCDIFFVISUAL_REPO_URL="${SRCDIFFVISUAL_REPO_URL:-https://github.com/NickStafford2/srcVisual.git}"
 
 echo "=== Workspace: $WS ==="
 echo "srcDiffVisual source:       $SRCDIFFVISUAL"

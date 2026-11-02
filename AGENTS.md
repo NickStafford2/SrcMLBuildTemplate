@@ -4,11 +4,11 @@ Guidance for Codex and other AI agents working in this workspace.
 
 ## Immediate Priority
 
-The master's thesis is the primary workspace objective. As of 2026-09-26, it
-is due in seven days. Prioritize work that directly improves the thesis,
-validates its claims, completes required experiments, or prepares professional
-review material. Defer unrelated cleanup and speculative features unless they
-unblock the thesis.
+Follow the current submission priority in
+[the private thesis README](thesis-workspace/README.md#current-priority).
+The defense is complete; remaining thesis work focuses on committee revisions
+and final submission. Defer unrelated cleanup, experiments and speculative
+features unless explicitly requested or needed to unblock that work.
 
 Urgency does not relax the evidence standard. Do not invent results,
 citations, implementation behavior, novelty claims, or conclusions. Keep

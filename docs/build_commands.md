@@ -1,52 +1,40 @@
-# Example Commands
+# Build Commands
 
-This file collects the most useful shell commands for working in `srcMLBuildTemplate`.
-It assumes the relevant binaries are already available on your `PATH`.
+Run these commands from the workspace root on the macOS host after installing
+Git and Docker Desktop and starting Docker. See [Workspace Layout](workspace.md)
+for repository restoration, branch selection, dependencies, and build paths;
+[Backup and Recovery](workspace.md#backup-and-recovery) covers a new computer.
 
-## First-Time Setup
-
-Install Ubuntu prerequisites:
-
-```bash
-./prereq_install_ubuntu.sh
-```
-
-Build and install `srcML` locally into this workspace:
+## Build and Test
 
 ```bash
-./build_srcML.sh
+make build           # optimized srcML, srcReader, srcDiff, and srcMove in Docker
+make test            # srcMove test suite in Docker
+make build-dev       # debug development build
+make build-production # tests/packages where supported
 ```
 
-Build `srcDiff` against the local `srcML` install:
+The build helpers can clone missing native-tool repositories. They do not
+restore a saved revision automatically; restore the intended checkouts before
+building. srcDiff uses `srcDiff/build` for both Debug and Release. srcReader
+and srcMove use `build-debug` for Debug and `build` for Release. Consult
+[Build Modes](workspace.md#build-modes) before mixing configurations.
+
+Check that the built tools start:
 
 ```bash
-./build_srcDiff.sh
+./bin/srcml-dev-shell srcml --version
+./bin/srcml-dev-shell srcdiff --help
+./bin/srcml-dev-shell srcMove --help
 ```
 
-Build a debug `srcDiff` in `srcDiff/build-debug`:
+For manual native-tool commands, enter `make shell` and use the dependency-order
+commands in [Build Order](workspace.md#build-order). The Ubuntu prerequisite
+installer is for native Ubuntu setup; it is not a macOS setup step.
 
-```bash
-SRCDIFF_DEBUG=1 ./build_srcDiff.sh
-```
+## Viewer
 
-Build `srcReader`:
-
-```bash
-./build_srcReader.sh
-```
-
-This clones `srcReader/` if it is missing.
-
-Build `srcMove`:
-
-```bash
-./build_srcMove.sh
-```
-
-This clones `srcMove/` if it is missing. Build `srcReader` first.
-
-Run a basic sanity test for `srcml` and `srcdiff`:
-
-```bash
-./test_src_tools.sh
-```
+The viewer belongs to `srcDiffVisual/`. Follow its
+[Docker quick start](../srcDiffVisual/README.md#run-locally-with-docker), including
+frontend development instructions. Its Compose environment supplies the frontend
+and Python dependencies separately from the root native-tool development image.

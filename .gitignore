@@ -2,6 +2,8 @@
 
 # Generated workspace reports; preserve research evidence before deleting output.
 /build/
+__pycache__/
+*.py[cod]
 
 srcDiff/
 srcDiff-dist/

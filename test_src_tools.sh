@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Adjust these paths if your install locations differ
-SRCML_BIN="$HOME/Projects/srcWorkspace/srcML-install/bin/srcml"
-SRCDIFF_BIN="$HOME/Projects/srcWorkspace/srcDiff/build/bin/srcdiff"
+# Resolve defaults relative to this scaffold, including inside /workspace in Docker.
+# Override either executable when testing a different installation.
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+SRCML_BIN="${SRCML_BIN:-$SCRIPT_DIR/srcML-install/bin/srcml}"
+SRCDIFF_BIN="${SRCDIFF_BIN:-$SCRIPT_DIR/srcDiff/build/bin/srcdiff}"
 
 ok() { echo "[OK] $*"; }
 fail() {
@@ -19,10 +21,10 @@ echo "=== Testing srcML and srcDiff ==="
 ok "Binaries exist"
 
 # temp directory
-TMPDIR="$(mktemp -d)"
-trap 'rm -rf "$TMPDIR"' EXIT
+SMOKE_TEST_TMPDIR="$(mktemp -d)"
+trap 'rm -rf "$SMOKE_TEST_TMPDIR"' EXIT
 
-cd "$TMPDIR"
+cd "$SMOKE_TEST_TMPDIR"
 
 # 2 test files
 cat >a.cpp <<'EOF'

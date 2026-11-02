@@ -8,5 +8,5 @@ exec "$SCRIPT_DIR/srcml-dev-shell" bash -lc '
   ./build_srcML.sh --yes
   ./build_srcReader.sh --yes --debug
   ./build_srcDiff.sh --yes --debug
-  ./build_srcMove.sh --yes --debug
+  SRCREADER_DEBUG=1 ./build_srcMove.sh --yes --debug
 '

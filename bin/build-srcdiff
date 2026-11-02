@@ -1,9 +1,15 @@
 #!/usr/bin/env bash
+# Run the workspace-built tool; this launcher does not build it.
+# macOS uses Docker with the workspace root as cwd, so pass workspace-relative
+# input/output paths. Linux runs directly and preserves the caller's cwd.
 set -euo pipefail
 WS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [ "${SRCDIFF_DEBUG:-0}" = "1" ]; then
-  exec "$WS/srcDiff/build-debug/bin/srcdiff" "$@"
+# srcDiff Debug and Release share the preset-controlled build directory.
+TOOL_PATH="srcDiff/build/bin/srcdiff"
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  exec "$WS/bin/srcml-dev-shell" "/workspace/$TOOL_PATH" "$@"
 fi
 
-exec "$WS/srcDiff/build/bin/srcdiff" "$@"
+exec "$WS/$TOOL_PATH" "$@"

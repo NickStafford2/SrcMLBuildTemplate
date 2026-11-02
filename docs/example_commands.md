@@ -1,7 +1,10 @@
 # Example Commands
 
 This file collects the most useful shell commands for working in `srcMLBuildTemplate`.
-It assumes the relevant binaries are already available on your `PATH`.
+For native-tool examples, first run `make build` from the host and enter
+`make shell`. Run the examples in that Docker shell from `/workspace`, where
+the relevant binaries are on `PATH`. See [Build Commands](build_commands.md)
+and [Workspace Layout](workspace.md) for setup and recovery.
 
 ## `srcml` Basics
 
@@ -222,7 +225,7 @@ Run `srcMove` on a `srcdiff` file and write a new annotated XML:
 srcMove/build/srcMove diff.xml diff_new.xml
 ```
 
-Run `srcMove` and print to stdout:
+Run `srcMove` with its default output file, `srcmove.xml`:
 
 ```bash
 srcMove/build/srcMove diff.xml
@@ -252,28 +255,19 @@ Run the canonical subtree unit test executable:
 srcMove/build/test_canonical_subtree_unit
 ```
 
-## Frontend Commands
+## Viewer Development
 
-Run the `srcMove` frontend dev server:
-
-```bash
-cd srcMove/frontend
-npm run dev
-```
-
-Build the frontend:
+The frontend belongs to `srcDiffVisual/`. From the macOS host workspace root,
+follow the viewer's [Docker quick start](../srcDiffVisual/README.md#run-locally-with-docker)
+to build and start the backend, then run:
 
 ```bash
-cd srcMove/frontend
-npm run build
+make -C srcDiffVisual dev
 ```
 
-Preview the production frontend build:
-
-```bash
-cd srcMove/frontend
-npm run preview
-```
+Open <http://localhost:5173> for frontend hot reload. The packaged application
+is available at <http://127.0.0.1:5000>. Frontend dependencies and Vite run in
+the viewer's Docker environment.
 
 ## Useful End-to-End Examples
 

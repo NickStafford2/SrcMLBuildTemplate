@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+# Run the workspace-built tool; this launcher does not build it.
+# macOS uses Docker with the workspace root as cwd, so pass workspace-relative
+# input/output paths. Linux runs directly and preserves the caller's cwd.
 set -euo pipefail
 WS="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-exec "$WS/srcMove/srcmove" "$@"
+
+case "${SRCMOVE_DEBUG:-0}" in
+  0) TOOL_PATH="srcMove/build/srcMove" ;;
+  1) TOOL_PATH="srcMove/build-debug/srcMove" ;;
+  *) echo "error: SRCMOVE_DEBUG must be 0 or 1" >&2; exit 1 ;;
+esac
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  exec "$WS/bin/srcml-dev-shell" "/workspace/$TOOL_PATH" "$@"
+fi
+
+exec "$WS/$TOOL_PATH" "$@"

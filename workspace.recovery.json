@@ -1,0 +1,64 @@
+{
+  "schema_version": 1,
+  "observed_date": "2026-11-02",
+  "purpose": "Source checkout recovery snapshot; records observed source revisions, not an attestation of compatible builds or frozen external packages.",
+  "repositories": [
+    {
+      "path": "srcML",
+      "url": "https://github.com/srcML/srcML.git",
+      "branch": "develop",
+      "commit": "51691c8ff5205543d092d0fba3e4f2f0164b9131",
+      "private": false
+    },
+    {
+      "path": "srcDiff",
+      "url": "https://github.com/srcML/srcDiff.git",
+      "branch": "develop",
+      "commit": "f48b8180e0c2e9d07e098553d96ed3895676bfdc",
+      "private": false,
+      "additional_refs": [
+        {
+          "remote": "personal",
+          "url": "git@github.com:NickStafford2/srcDiff.git",
+          "branch": "profiler",
+          "commit": "25d5c9080e7409f6573d0b1b926a18c7d147dd01"
+        }
+      ]
+    },
+    {
+      "path": "srcReader",
+      "url": "git@github.com:srcML/srcReader.git",
+      "branch": "mover",
+      "commit": "113a08871dc878abeb7890e27a8fd5aa17e39e31",
+      "private": false
+    },
+    {
+      "path": "srcMove",
+      "url": "git@github.com:NickStafford2/srcMove.git",
+      "branch": "main",
+      "commit": "4235c5548e638d4e6cbcf83795bb1e19d22115af",
+      "private": false
+    },
+    {
+      "path": "srcDiffVisual",
+      "url": "git@github.com:NickStafford2/srcVisual.git",
+      "branch": "results-schema-v3",
+      "commit": "d43eb02eb04e030994780bf7ffbf5ee379dc2228",
+      "private": false
+    },
+    {
+      "path": "thesis-workspace",
+      "url": "git@github.com:NickStafford2/Thesis-Workspace.git",
+      "branch": "main",
+      "commit": "40369a8fe6a63198825e167512f690a186f5d037",
+      "private": true
+    },
+    {
+      "path": "thesis-workspace/thesis-final",
+      "url": "git@github.com:KSU-SDML/Nick-Stafford.git",
+      "branch": "main",
+      "commit": "a04f574064350f60b7491dc606fdf7e29b2cd723",
+      "private": false
+    }
+  ]
+}
