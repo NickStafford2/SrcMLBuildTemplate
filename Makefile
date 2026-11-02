@@ -17,6 +17,10 @@ help:
 	@printf '  %-28s %s\n' 'make build-release' 'Optimized local build'
 	@printf '  %-28s %s\n' 'make build-production' 'Release/test/package build where supported'
 	@printf '  %-28s %s\n' 'make test' 'Run srcMove tests in Docker'
+	@printf '  %-28s %s\n' 'make history-new' 'Build current tools and recreate REPO=notepadpp|sqlite|opencv|linux COUNT=100'
+	@printf '  %-28s %s\n' 'make history-more' 'Add COUNT=100 pairs with frozen tools'
+	@printf '  %-28s %s\n' 'make history-export' 'Copy immutable evidence ZIP to thesis-workspace'
+	@printf '  %-28s %s\n' 'make history-status' 'Show the active analysis'
 	@printf '  %-28s %s\n' 'make history-scaling' 'Measure srcMove History throughput across JOBS'
 	@printf '  %-28s %s\n' 'make srcdiffvisual-eval-check' 'Build and verify the mounted srcMove binary; run no analysis'
 	@printf '  %-28s %s\n' 'make srcdiffvisual-eval-fast' 'Evaluate a small Notepad++ sample (default: 10 pairs)'
@@ -62,6 +66,24 @@ history-scaling:
 		LABEL="$(LABEL)" ENVIRONMENT_LABEL="$(ENVIRONMENT_LABEL)" \
 		SCRATCH_ROOT="$(SCRATCH_ROOT)" DIRECTORY="$(DIRECTORY)" \
 		UPDATE="$(UPDATE)" OFFLINE="$(OFFLINE)"
+
+REPO ?= notepadpp
+COUNT ?= 100
+HISTORY_JOBS ?= 4
+
+.PHONY: history-new history-more history-export history-status
+history-new:
+	./bin/srcdiffvisual-history-refresh --repository "$(REPO)" --fresh --pairs "$(COUNT)" --jobs "$(HISTORY_JOBS)" --rebuild-image $(if $(START),--start "$(START)",)
+	./bin/history-workflow export --repository "$(REPO)"
+
+history-more:
+	./bin/history-workflow more --repository "$(REPO)" --count "$(COUNT)" --jobs "$(HISTORY_JOBS)"
+
+history-export:
+	./bin/history-workflow export --repository "$(REPO)"
+
+history-status:
+	./bin/history-workflow status --repository "$(REPO)"
 
 SRCDIFFVISUAL_JOBS ?= 8
 SRCDIFFVISUAL_FAST_PAIRS ?= 10

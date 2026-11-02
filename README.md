@@ -15,6 +15,9 @@ separate git checkouts placed under one workspace so the build scripts can find
 their dependencies. See [Workspace Layout](docs/workspace.md) before changing
 the directory structure or adding new setup scripts.
 
+For what to save to GitHub and how to recover on another computer, see
+[Backup and Recovery](docs/workspace.md#backup-and-recovery).
+
 ## Includes
 
 This repo bundles many scripts:
@@ -124,8 +127,8 @@ For the full dependency layout, clone behavior, and path assumptions, see
 1. Clone this repo anywhere you want:
 
    ```bash
-   git clone git@github.com:NickStafford2/SrcMLBuildTemplate.git
-   cd srcMLBuildTemplate
+   git clone git@github.com:NickStafford2/SrcMLBuildTemplate.git SrcMLBuildTemplate
+   cd SrcMLBuildTemplate
    ```
 
 2. Make all scripts executable:

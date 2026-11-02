@@ -83,6 +83,85 @@ The main data flow is:
 source code -> srcML XML -> srcDiff XML -> srcMove annotations -> srcDiffVisual
 ```
 
+## Backup and Recovery
+
+Saving this root repository saves the workspace setup, not the entire directory
+on disk. A local commit is recoverable from GitHub only after it is pushed.
+
+| Material | Where to save it | Local cleanup |
+| --- | --- | --- |
+| Root scripts, Docker configuration, Makefile, docs, agent guidance, lockfile | This repository | Commit intentional changes, including new scripts referenced by Make targets. |
+| Source changes in independent checkouts | Each owning repository; use a personal GitHub fork if upstream is not writable | Commit and push separately. |
+| Thesis drafts, references, notes, research evidence | Private `thesis-workspace` repository or a separately verified private backup for large/restricted files | Review ignored files too; root Git never saves them. |
+| Polished public thesis documents | Independent `thesis-workspace/thesis-final` repository | Follow its publication rules. |
+| Build/install/dist trees, caches, virtual environments | Recreate from saved source | Usually disposable; first preserve any unique research evidence. |
+| Root `build/selection-coverage-map/` | Generated srcMove test diagnostics; retain selected evidence privately if needed | Ignored here; retained locally until reviewed. |
+
+### Before losing access to this computer
+
+For each independent repository listed above, inspect `git status --short`,
+`git status --short --ignored`, `git remote -v`, and `git branch -vv` from its
+own directory. Review untracked files before committing; ignored files do not
+appear in an ordinary status check. Save the chosen remote URL, branch, and full
+commit ID (`git rev-parse HEAD`) in the private thesis workspace for recovery.
+Review file contents before publishing private material or credentials.
+
+After committing reviewed files, push the intended branch to a writable GitHub
+remote. For a branch named `main` and remote named `origin`, for example:
+
+```bash
+git push -u origin main
+git rev-parse HEAD
+git ls-remote origin refs/heads/main
+```
+
+The last two commands must show the same commit ID. Substitute the actual
+branch and remote for each repository. A cached `origin/main`, a clean working
+tree, or a lockfile entry alone does not verify an off-computer backup. Confirm
+that important files are tracked and that private repositories can be accessed
+from another computer. Save account recovery credentials separately from Git.
+
+Export important history evidence with `make history-export REPO=<repository>`
+before saving it in the private thesis repository. Exporting only copies files
+locally; it does not commit or upload them. Preserve original analysis state if
+needed to resume work: an evidence ZIP is not by itself a verified restoration
+of the entire live workspace. Large datasets and ignored experiment archives
+need a separate backup decision; do not force-add every generated directory.
+
+### Recover on another Mac
+
+1. Install Git and Docker Desktop, start Docker, and restore GitHub access.
+2. Clone the scaffold:
+
+   ```bash
+   git clone git@github.com:NickStafford2/SrcMLBuildTemplate.git SrcMLBuildTemplate
+   cd SrcMLBuildTemplate
+   ```
+
+3. Clone the independent repositories into the paths in
+   [Expected Directory Structure](#expected-directory-structure), using the
+   saved writable remotes and branches. Restore the recorded commits before
+   building. This is particularly important for modified dependencies: default
+   upstream clones may omit personal changes. Restore the private thesis repo
+   and its nested public checkout separately.
+4. Run `make lock-status`. For an older locked environment, manually check out
+   the four commits in `workspace.lock.json` and run `make lock-verify`.
+   The lock helper does not clone or check out anything, and does not cover
+   srcDiffVisual or either thesis repository. Do not update the lock just to
+   hide a recovery mismatch.
+5. Run `make build` and `make test` from the host. Docker recreates the Linux
+   environment and generated native outputs. Follow the owning repository's
+   instructions for the viewer and research datasets; verify preserved evidence
+   before starting new analyses.
+
+The build scripts can clone missing dependencies, but do not restore locked
+revisions automatically. At the November 2, 2026 local audit, the existing
+`srcDiffVisual` checkout's origin was
+`git@github.com:NickStafford2/srcVisual.git`, whereas the bootstrap default uses
+`NickStafford2/srcDiffVisual.git`. Remote availability and any GitHub redirect
+were not verified. Use the saved remote when restoring; the bootstrap accepts
+`SRCDIFFVISUAL_REPO_URL` as documented below.
+
 ## Locked Source Revisions
 
 The tracked `workspace.lock.json` records the exact srcML, srcDiff, srcReader,
@@ -198,6 +277,10 @@ On macOS, keep this directory on the normal macOS filesystem. Edit with Neovim,
 Codex, or any other Mac tool. Use Docker Desktop only as the Ubuntu build and
 runtime environment.
 
+The workspace image includes `python3-lxml` for full XPath evaluation of
+srcReader locators in benchmark consumers. Rebuild the image after updating
+this dependency; JSON-only results admission uses the Python standard library.
+
 The root Docker environment exists specifically to isolate the complete srcML
 toolchain from macOS while keeping every checkout and generated artifact
 accessible to host-side editors and Codex. Builds, tests, and Linux-specific
@@ -231,6 +314,48 @@ make srcdiffvisual-eval-fast  # develop against 10 Notepad++ pairs by default
 make srcdiffvisual-eval-400   # run the fixed research evaluation
 make docker-rebuild  # rebuild image after Dockerfile changes
 ```
+
+For a repeatable repository-history study, use:
+
+```bash
+make history-new REPO=notepadpp COUNT=100  # rebuild, archive old state, recreate
+make history-more REPO=notepadpp COUNT=100 # add another 100 using frozen tools
+make history-status REPO=notepadpp         # inspect coverage and failures
+make history-export REPO=notepadpp         # save an immutable thesis snapshot
+```
+
+Run these targets from the workspace root on the macOS host. `history-more`,
+`history-status`, and `history-export` also work inside the Linux development
+shell, from either `/workspace` or `/workspace/srcMove`. In that shell they call
+the local Python CLI directly; Docker is not needed inside Docker. `history-new`
+requires the host because it rebuilds the viewer image and restarts services.
+The viewer's Compose environment trusts only its configured Git worktree
+mounts, allowing the viewer and development shell to share them under different
+Linux users.
+
+`REPO=sqlite`, `REPO=opencv`, or `REPO=linux` selects another configured reference
+repository. Linux retains its configured `kernel/` scope when recreated. `HISTORY_JOBS=4`
+is the default parallelism. A recreation keeps the previous starting commit;
+`START=<full-commit>` deliberately changes it. `history-new` forces a native
+srcMove rebuild and rebuilds the viewer image, preserves old state in a dated
+`.srcmove-archive-*` directory, and starts the viewer at
+<http://127.0.0.1:5000>. Finish other history commands before recreating state.
+`history-more` never rebuilds or changes admitted tool copies. Interrupted work
+is checkpointed; use the CLI's absolute `run --pairs N` target to finish the
+original target before requesting another increment.
+
+The History screen also provides an **Analyze 100 more** action and a
+**Save thesis snapshot** action. Recreation, completed browser extensions, and completed
+command-line extensions publish snapshots to
+`thesis-workspace/data/srcMove-history/<repository>/`. Browser downloads contain
+the same bytes. Snapshot contents and evidence limits are documented in
+[srcMove history runtime](../srcMove/srcmove_history/docs/runtime.md), and the
+viewer workflow in [History browser](../srcDiffVisual/docs/history-browser.md).
+
+Both services bind-mount the workspace native srcMove and its Python history
+and runtime modules. Recreate the analysis after changing these modules or the
+algorithm; rebuild the viewer image after backend or frontend changes.
+Generated `srcDiff/profile-build` output is excluded from the Docker context.
 
 After changing the srcMove algorithm, `make srcdiffvisual-eval-fast` incrementally
 rebuilds the Linux `srcMove/build/srcMove` target in the workspace development

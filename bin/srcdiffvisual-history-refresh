@@ -4,7 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$WORKSPACE/srcDiffVisual/compose.yaml"
-HISTORY_REPOSITORY="$WORKSPACE/srcMove/reference-repositories/notepadpp"
+REPOSITORY=notepadpp
+HISTORY_REPOSITORY="$WORKSPACE/srcMove/reference-repositories/$REPOSITORY"
 ANALYSIS_ROOT="$HISTORY_REPOSITORY/.srcmove"
 HOST_SRCMOVE="$WORKSPACE/srcMove/build/srcMove"
 BUILD_RECEIPT="$HOST_SRCMOVE.build-receipt.json"
@@ -16,17 +17,24 @@ PAIRS=10
 JOBS=8
 CHECK_ONLY=0
 REBUILD_IMAGE=0
+FRESH=0
+MORE=""
+START=""
 
 usage() {
   cat <<'EOF'
-Usage: bin/srcdiffvisual-history-refresh [--pairs N] [--jobs N] [--check] [--rebuild-image]
+Usage: bin/srcdiffvisual-history-refresh [--repository notepadpp|sqlite|opencv|linux] [--pairs N|--more N] [--fresh] [--start COMMIT] [--jobs N] [--check] [--rebuild-image]
 
 Incrementally build the workspace's Linux srcMove executable, verify that
 srcDiffVisual mounts those exact bytes, and evaluate the newest N adjacent
-Notepad++ commit pairs. Analyses are reused only for identical srcMove and
+selected repository commit pairs. Analyses are reused only for identical srcMove and
 srcDiff executable checksums; older analyses are archived, never removed.
 
 Options:
+  --repository ID  Repository to analyze (default: notepadpp)
+  --fresh          Archive existing analysis and recreate the same starting revision
+  --start COMMIT   Override starting revision for a new analysis
+  --more N         Extend existing analysis by N pairs
   --pairs N        Total adjacent commit pairs to cover (default: 10)
   --jobs N         Number of history-analysis workers (default: 8)
   --check          Verify the build, image, and service mounts; run no analysis
@@ -49,6 +57,19 @@ compose() {
 
 while (( $# > 0 )); do
   case "$1" in
+    --repository)
+      REPOSITORY="${2:?repository required}"
+      if [[ "$REPOSITORY" != notepadpp && "$REPOSITORY" != sqlite && "$REPOSITORY" != opencv && "$REPOSITORY" != linux ]]; then
+        echo "error: repository must be notepadpp, sqlite, opencv, or linux" >&2
+        exit 2
+      fi
+      shift 2 ;;
+    --fresh) FRESH=1; shift ;;
+    --start) START="${2:?full starting commit required}"; shift 2 ;;
+    --more)
+      MORE="${2:?increment required}"
+      if ! positive_integer "$MORE"; then exit 2; fi
+      shift 2 ;;
     --pairs)
       if (( $# < 2 )) || ! positive_integer "$2"; then
         echo "error: --pairs requires a positive integer" >&2
@@ -85,6 +106,15 @@ while (( $# > 0 )); do
   esac
 done
 
+HISTORY_REPOSITORY="$WORKSPACE/srcMove/reference-repositories/$REPOSITORY"
+ANALYSIS_ROOT="$HISTORY_REPOSITORY/.srcmove"
+CONTAINER_REPOSITORY="/history/$REPOSITORY"
+
+if [ -f /.dockerenv ]; then
+  echo "error: recreation builds the viewer image and restarts services; run make history-new from the workspace on the macOS host. history-more, history-status, and history-export also work inside this development shell." >&2
+  exit 2
+fi
+
 if ! command -v docker >/dev/null 2>&1; then
   echo "error: docker is not installed or not on PATH" >&2
   exit 1
@@ -98,13 +128,17 @@ if [ ! -f "$COMPOSE_FILE" ]; then
   exit 1
 fi
 if [ ! -d "$HISTORY_REPOSITORY/.git" ]; then
-  echo "error: Notepad++ reference repository not found: $HISTORY_REPOSITORY" >&2
+  echo "error: Reference repository not found: $HISTORY_REPOSITORY" >&2
   exit 1
 fi
 
 cd "$WORKSPACE"
 
-echo "Incrementally building the Linux srcMove executable."
+echo "Building the Linux srcMove executable."
+# A fresh study forces relinking so its build receipt describes this checkout.
+if (( FRESH == 1 )); then
+  "$SCRIPT_DIR/srcml-dev-shell" cmake --build /workspace/srcMove/build --target srcMove --clean-first
+fi
 "$SCRIPT_DIR/srcml-dev-shell" bash -lc '
   set -euo pipefail
   test -d /workspace/srcML-install/include
@@ -170,6 +204,15 @@ echo "srcMove SHA-256: $srcmove_checksum"
 echo "Build receipt: ${receipt_id:-$BUILD_RECEIPT}"
 echo "Receipt source: ${receipt_source_commit:-unknown} (tracked_dirty=${receipt_source_dirty:-unknown})"
 
+# Capture the original anchor through the installed public CLI before replacing it.
+# This works for older schema analyses and keeps recreation on the same revisions.
+if [ -f "$ANALYSIS_ROOT/analysis.sqlite3" ] && [ -z "$START" ]; then
+  if ! previous_status="$(compose exec -T srcdiffvisual srcmove-history -C "$CONTAINER_REPOSITORY" status --format json 2>/dev/null)"; then
+    previous_status="$(compose run --rm --no-deps srcdiffvisual srcmove-history -C "$CONTAINER_REPOSITORY" status --format json)"
+  fi
+  START="$(printf '%s' "$previous_status" | python3 -c 'import json,sys; print(json.load(sys.stdin)["history"]["newest_commit"])')"
+fi
+
 if (( REBUILD_IMAGE == 1 )); then
   echo "Rebuilding the complete srcDiffVisual image."
   compose build srcdiffvisual
@@ -231,10 +274,17 @@ if [ -f "$ANALYSIS_ROOT/analysis.sqlite3" ]; then
   fi
 fi
 
+compatible=1
+if [ -f "$ANALYSIS_ROOT/analysis.sqlite3" ]; then
+  if ! compose run --rm --no-deps srcdiffvisual srcmove-history -C "$CONTAINER_REPOSITORY" definition --format json >/dev/null; then
+    compatible=0
+  fi
+fi
+
 if (( CHECK_ONLY == 1 )); then
   if [ -z "$active_srcmove_checksum" ]; then
     echo "Analysis plan: initialize a new checksum-bound analysis."
-  elif [ "$active_srcmove_checksum" = "$srcmove_checksum" ] && \
+  elif (( compatible == 1 && FRESH == 0 )) && [ "$active_srcmove_checksum" = "$srcmove_checksum" ] && \
        [ "$active_srcdiff_checksum" = "$srcdiff_checksum" ]; then
     echo "Analysis plan: reuse the active analysis (tool checksums match)."
   else
@@ -244,6 +294,11 @@ if (( CHECK_ONLY == 1 )); then
   fi
   echo "Evaluation preflight complete; no analysis or service was started."
   exit 0
+fi
+
+if [ -n "$MORE" ] && { (( FRESH == 1 || compatible == 0 )) || [ "$active_srcmove_checksum" != "$srcmove_checksum" ] || [ "$active_srcdiff_checksum" != "$srcdiff_checksum" ]; }; then
+  echo "error: extension requires an existing matching analysis; use history-new first" >&2
+  exit 1
 fi
 
 new_analysis=0
@@ -269,7 +324,7 @@ restore_analysis_on_initialization_failure() {
 }
 
 if [ -n "$active_srcmove_checksum" ] && \
-   { [ "$active_srcmove_checksum" != "$srcmove_checksum" ] || \
+   { (( FRESH == 1 || compatible == 0 )) || [ "$active_srcmove_checksum" != "$srcmove_checksum" ] || \
      [ "$active_srcdiff_checksum" != "$srcdiff_checksum" ]; }; then
   echo "Stopping srcDiffVisual before rotating the active analysis."
   compose down
@@ -281,7 +336,11 @@ if [ -n "$active_srcmove_checksum" ] && \
     exit 1
   fi
   echo "Archiving checksum-bound analysis at: $archive_root"
-  mv "$ANALYSIS_ROOT" "$archive_root"
+  if ! mv "$ANALYSIS_ROOT" "$archive_root"; then
+    compose up -d --force-recreate || true
+    echo "error: archive failed; original analysis retained. Finish any concurrent history commands and retry." >&2
+    exit 1
+  fi
   had_analysis=1
   initializing=1
   trap restore_analysis_on_initialization_failure EXIT
@@ -303,7 +362,14 @@ if (( new_analysis == 1 )); then
     trap restore_analysis_on_initialization_failure EXIT
   fi
   compose run --rm --no-deps srcdiffvisual \
-    srcmove-history -C /history/repository init
+    srcmove-history -C "$CONTAINER_REPOSITORY" init
+  cp "$BUILD_RECEIPT" "$ANALYSIS_ROOT/srcMove.build-receipt.json"
+  python3 - "$ANALYSIS_ROOT" "$WORKSPACE" "$source_commit" "$START" <<'PROVENANCE'
+import hashlib, json, pathlib, sys
+state, workspace = map(pathlib.Path, sys.argv[1:3])
+modules = {str(p.relative_to(workspace / "srcMove")): hashlib.sha256(p.read_bytes()).hexdigest() for directory in ("srcmove_history", "srcmove_runtime") for p in sorted((workspace / "srcMove" / directory).rglob("*.py"))}
+(state / "workflow-provenance.json").write_text(json.dumps({"schema_version": 1, "srcMove_checkout": sys.argv[3], "starting_commit": sys.argv[4], "analyzer_sources": modules}, indent=2) + "\n")
+PROVENANCE
   initializing=0
   trap - EXIT
 fi
@@ -314,11 +380,20 @@ compose up -d --force-recreate
 echo "Analyzing the newest $PAIRS adjacent commit pairs with $JOBS workers."
 echo "The checksum-bound analysis is durable and can be resumed if interrupted."
 run_arguments=(
-  srcmove-history -C /history/repository run
-  --pairs "$PAIRS"
+  srcmove-history -C "$CONTAINER_REPOSITORY" run
   --jobs "$JOBS"
 )
+if [ -n "$MORE" ]; then
+  if (( new_analysis == 1 )); then
+    echo "error: extension requires matching current analysis; use history-new first" >&2
+    exit 1
+  fi
+  run_arguments+=(--more "$MORE")
+else
+  run_arguments+=(--pairs "$PAIRS")
+fi
 if (( new_analysis == 1 )); then
+  if [ -n "$START" ]; then run_arguments+=(--start "$START"); fi
   run_arguments+=(--srcdiff "$CONTAINER_SRCDIFF" --srcmove "$CONTAINER_SRCMOVE")
 fi
 
@@ -330,7 +405,7 @@ fi
 
 echo "History evaluation complete."
 compose run --rm srcdiffvisual \
-  srcmove-history -C /history/repository status
+  srcmove-history -C "$CONTAINER_REPOSITORY" status
 if (( had_analysis == 1 )); then
   echo "Previous analysis: $archive_root"
 fi

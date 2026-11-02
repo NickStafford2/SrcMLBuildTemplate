@@ -48,6 +48,7 @@ RUN apt-get update -y \
     openjdk-17-jdk-headless \
     pkg-config \
     python3 \
+    python3-lxml \
     ripgrep \
     tree \
     valgrind \

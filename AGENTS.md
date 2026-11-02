@@ -67,6 +67,12 @@ When building manually inside Docker, use dependency order:
 
 ## Editing Rules
 
+- Before creating large experiment outputs, source copies, or analysis archives,
+  check free disk space and estimate the additional storage. Reuse existing
+  immutable inputs and content-addressed stores; do not duplicate whole trees
+  for routine AI reviews. Keep temporary output bounded and remove disposable
+  files created by the task when finished. Preserve thesis evidence and user
+  changes; identify and review obsolete evidence before deleting it.
 - Do not commit generated build/install/dist directories.
 - Do not treat sibling source checkouts as part of the top-level git repo.
 - Do not revert user changes in sibling repos or generated docs unless the user

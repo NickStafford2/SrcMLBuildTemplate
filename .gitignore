@@ -1,5 +1,8 @@
 .DS_STORE
 
+# Generated workspace reports; preserve research evidence before deleting output.
+/build/
+
 srcDiff/
 srcDiff-dist/
 srcDiff-install/
